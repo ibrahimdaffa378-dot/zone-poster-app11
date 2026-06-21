@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import hddPoster from "@/assets/hdd-poster.asset.json";
 import zanePoster from "@/assets/zane-poster.asset.json";
 
@@ -35,8 +35,8 @@ function Index() {
             <span className="text-[10px] text-[#39ff14]/80">● NOW STREAMING</span>
           </div>
 
-          <button
-            type="button"
+          <Link
+            to="/watch"
             className="group relative block w-full overflow-hidden rounded-3xl bg-black ring-1 ring-white/10 shadow-[0_20px_60px_-20px_rgba(57,255,20,0.35)] transition-transform duration-300 ease-out hover:scale-[1.015] active:scale-[0.99]"
           >
             <div className="aspect-[16/9] w-full overflow-hidden">
@@ -55,10 +55,13 @@ function Index() {
                 Heaven Defying Dragonforce
               </h3>
               <p className="mt-1 text-xs text-neutral-300/80 max-w-md">
-                Pertarungan epik dua pendekar stickman dengan aura legendaris. Tonton sekarang.
+                Pertarungan epik dua pendekar stickman dengan aura legendaris. Tap untuk menonton.
               </p>
+              <span className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#39ff14] px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-black">
+                ▶ Tonton Sekarang
+              </span>
             </div>
-          </button>
+          </Link>
         </section>
 
         {/* Coming Soon */}
