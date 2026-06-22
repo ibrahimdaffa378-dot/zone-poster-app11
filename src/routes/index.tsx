@@ -64,49 +64,8 @@ function Index() {
           </Link>
         </section>
 
-        {/* Coming Soon */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm uppercase tracking-[0.2em] text-neutral-400">Coming Soon</h2>
-            <span className="text-[10px] text-yellow-300/80">● AKAN DATANG</span>
-          </div>
 
-          <button
-            type="button"
-            className="group relative block w-full overflow-hidden rounded-3xl ring-1 ring-white/10 transition-transform duration-300 ease-out hover:scale-[1.015] active:scale-[0.99]"
-          >
-            <div className="aspect-[4/5] sm:aspect-[16/10] w-full overflow-hidden">
-              <img
-                src={zanePoster.url}
-                alt="Zane Movies — segera hadir"
-                className="h-full w-full object-cover blur-md scale-110 brightness-75"
-              />
-            </div>
 
-            {/* Dark overlay */}
-            <div className="absolute inset-0 bg-black/55" />
-
-            {/* Glass card */}
-            <div className="absolute inset-0 flex items-center justify-center p-6">
-              <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-white/5 px-6 py-7 text-center backdrop-blur-2xl shadow-2xl">
-                <span className="inline-block rounded-full border border-yellow-300/40 bg-yellow-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-yellow-200">
-                  Segera Hadir di Zone
-                </span>
-                <h3 className="mt-4 text-2xl font-black tracking-tight text-white">
-                  Zane <span className="text-yellow-300">Movies</span>
-                </h3>
-                <p className="mt-2 text-xs text-neutral-300/90">
-                  Universe baru dari Zone. Sebuah cerita yang belum pernah kamu lihat.
-                </p>
-                <div className="mt-5 flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.25em] text-neutral-400">
-                  <span className="h-px w-6 bg-neutral-600" />
-                  Stay Tuned
-                  <span className="h-px w-6 bg-neutral-600" />
-                </div>
-              </div>
-            </div>
-          </button>
-        </section>
 
         <p className="text-center text-[10px] uppercase tracking-widest text-neutral-600 pt-4">
           © Zone Studio
