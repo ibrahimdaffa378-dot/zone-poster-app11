@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import hddPoster from "@/assets/hdd-poster.asset.json";
-import zanePoster from "@/assets/zane-poster.asset.json";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
