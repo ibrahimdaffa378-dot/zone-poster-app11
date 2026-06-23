@@ -29,22 +29,35 @@ const EPISODES: Episode[] = [
 
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2];
 
-const AUTO_DANMAKU: { t: number; text: string }[] = [
-  { t: 2, text: "Keren banget animasinya! 🔥" },
-  { t: 5, text: "Lei Zhen bangkit!" },
-  { t: 9, text: "Naga Awal muncul! 🐉" },
-  { t: 13, text: "Gilaaa effectnya wkwk" },
-  { t: 18, text: "Animasi Indo makin keren" },
-  { t: 24, text: "Auto subscribe ✨" },
-  { t: 30, text: "Sound design-nya nampol" },
-  { t: 38, text: "Plot twist incoming..." },
-  { t: 46, text: "Wuuusssh ⚡" },
-  { t: 55, text: "Naga Awal OP!" },
+type Comment = {
+  id: number;
+  user: string;
+  avatarColor: string;
+  text: string;
+  time: number; // epoch ms
+  likes: number;
+  liked: boolean;
+};
+
+const SEED_COMMENTS: Omit<Comment, "id" | "time">[] = [
+  { user: "RyuFan88", avatarColor: "#39FF7A", text: "Animasinya gokil sih, fight scene episode ini juara! 🔥", likes: 124, liked: false },
+  { user: "Cultivator_Lei", avatarColor: "#7afcff", text: "Lei Zhen vibes-nya dapet banget, gak sabar ep berikutnya.", likes: 87, liked: false },
+  { user: "AnimeIndo", avatarColor: "#ffe66d", text: "Bangga animasi lokal kualitasnya makin naik 👏", likes: 56, liked: false },
+  { user: "NagaAwal", avatarColor: "#ff8fb1", text: "Sound design-nya nampol, headphone wajib!", likes: 33, liked: false },
 ];
 
-type Bullet = { id: number; text: string; row: number; color: string };
-
 const NEON = "#39FF7A";
+
+function timeAgo(ms: number) {
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 60) return `${s} dtk lalu`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} mnt lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  return `${d} hari lalu`;
+}
 
 function fmt(s: number) {
   if (!isFinite(s)) return "0:00";
