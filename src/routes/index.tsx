@@ -166,26 +166,10 @@ function Index() {
   return (
     <div className="min-h-screen bg-[#0a0d0b] text-white">
       <style>{`
-        @keyframes danmaku-fly {
-          from { transform: translateX(0); }
-          to { transform: translateX(-120vw); }
-        }
-        .danmaku-bullet {
-          position: absolute;
-          left: 100%;
-          white-space: nowrap;
-          font-weight: 600;
-          font-size: 14px;
-          letter-spacing: .2px;
-          animation: danmaku-fly 9s linear forwards;
-          pointer-events: none;
-        }
-        @media (min-width: 768px) {
-          .danmaku-bullet { font-size: 16px; }
-        }
         .neon-glow { box-shadow: 0 0 0 1px rgba(57,255,122,.35), 0 0 24px rgba(57,255,122,.15); }
         .range-neon { accent-color: ${NEON}; }
       `}</style>
+
 
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur">
