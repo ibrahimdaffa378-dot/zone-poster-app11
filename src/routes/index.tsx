@@ -69,8 +69,7 @@ function fmt(s: number) {
 function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
-  const firedRef = useRef<Set<string>>(new Set());
-  const bulletIdRef = useRef(0);
+  const commentIdRef = useRef(1000);
 
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -80,14 +79,25 @@ function Index() {
   const [muted, setMuted] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [speedOpen, setSpeedOpen] = useState(false);
-  const [bullets, setBullets] = useState<Bullet[]>([]);
   const [input, setInput] = useState("");
-  const [comments, setComments] = useState<string[]>([]);
+  const [comments, setComments] = useState<Comment[]>(() =>
+    SEED_COMMENTS.map((c, i) => ({
+      ...c,
+      id: i,
+      time: Date.now() - (i + 1) * 1000 * 60 * (15 + i * 30),
+    })),
+  );
+  const [, setTick] = useState(0);
 
   const current = EPISODES[idx];
 
+  // refresh "time ago" labels every minute
   useEffect(() => {
-    firedRef.current.clear();
+    const id = window.setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
     setTime(0);
     setPlaying(false);
   }, [idx]);
@@ -102,29 +112,10 @@ function Index() {
     }
   }, [volume, muted]);
 
-  const launchBullet = (text: string) => {
-    const id = ++bulletIdRef.current;
-    const row = Math.floor(Math.random() * 8);
-    const palette = [NEON, "#ffffff", "#ffe66d", "#7afcff", "#ff8fb1"];
-    const color = palette[Math.floor(Math.random() * palette.length)];
-    setBullets((b) => [...b, { id, text, row, color }]);
-    window.setTimeout(() => {
-      setBullets((b) => b.filter((x) => x.id !== id));
-    }, 9000);
-  };
-
   const onTimeUpdate = () => {
     const v = videoRef.current;
     if (!v) return;
     setTime(v.currentTime);
-    const sec = Math.floor(v.currentTime);
-    AUTO_DANMAKU.forEach((c) => {
-      const key = `${idx}-${c.t}`;
-      if (sec === c.t && !firedRef.current.has(key)) {
-        firedRef.current.add(key);
-        launchBullet(c.text);
-      }
-    });
   };
 
   const togglePlay = () => {
@@ -146,30 +137,31 @@ function Index() {
     e.preventDefault();
     const t = input.trim();
     if (!t) return;
-    launchBullet(t);
-    setComments((c) => [t, ...c].slice(0, 30));
+    const newC: Comment = {
+      id: ++commentIdRef.current,
+      user: "Kamu",
+      avatarColor: NEON,
+      text: t,
+      time: Date.now(),
+      likes: 0,
+      liked: false,
+    };
+    setComments((c) => [newC, ...c]);
     setInput("");
+  };
+
+  const toggleLike = (id: number) => {
+    setComments((cs) =>
+      cs.map((c) =>
+        c.id === id
+          ? { ...c, liked: !c.liked, likes: c.likes + (c.liked ? -1 : 1) }
+          : c,
+      ),
+    );
   };
 
   const progress = dur ? (time / dur) * 100 : 0;
 
-  const bulletNodes = useMemo(
-    () =>
-      bullets.map((b) => (
-        <div
-          key={b.id}
-          className="danmaku-bullet"
-          style={{
-            top: `${4 + b.row * 11}%`,
-            color: b.color,
-            textShadow: "0 0 6px rgba(0,0,0,.9), 0 1px 2px rgba(0,0,0,.9)",
-          }}
-        >
-          {b.text}
-        </div>
-      )),
-    [bullets],
-  );
 
   return (
     <div className="min-h-screen bg-[#0a0d0b] text-white">
