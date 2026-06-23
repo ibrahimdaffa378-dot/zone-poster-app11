@@ -5,6 +5,7 @@ import ep2 from "@/assets/ep2.mp4.asset.json";
 import ep3 from "@/assets/ep3.mp4.asset.json";
 import ep4 from "@/assets/ep4.mp4.asset.json";
 import ep5 from "@/assets/ep5.mp4.asset.json";
+import poster from "@/assets/hdd-poster.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
