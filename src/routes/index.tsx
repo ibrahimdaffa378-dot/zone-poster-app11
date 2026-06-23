@@ -566,6 +566,62 @@ function Index() {
             })}
           </div>
         </div>
+
+        {/* Coming Soon — Adit & Sopo Jarwo */}
+        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-black uppercase tracking-widest">Akan Datang</h3>
+            <span
+              className="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+              style={{ borderColor: NEON, color: NEON }}
+            >
+              Coming Soon
+            </span>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="relative aspect-[3/4] w-28 shrink-0 overflow-hidden rounded-lg border border-white/10">
+              <img
+                src={aditPoster.url}
+                alt="Adit & Sopo Jarwo poster"
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <span
+                className="absolute left-1 top-1 rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-black"
+                style={{ background: NEON }}
+              >
+                Soon
+              </span>
+              <span className="absolute inset-x-0 bottom-1 text-center text-[10px] font-black uppercase tracking-widest text-white drop-shadow">
+                Coming Soon
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-base font-black leading-tight">
+                Adit & Sopo <span style={{ color: NEON }}>Jarwo</span>
+              </h4>
+              <p className="mt-1 text-[11px] text-white/60">
+                Petualangan seru Adit, Dennis, dan kawan-kawan di kampung. Episode 1–6 segera hadir.
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-1.5">
+                {COMING_SOON.map((e) => (
+                  <div
+                    key={e.num}
+                    className="rounded-md border border-dashed border-white/15 bg-black/40 px-2 py-1.5 text-[10px] text-white/60"
+                  >
+                    <div className="font-bold text-white/80">Ep {e.num}</div>
+                    <div className="truncate">{e.title}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] uppercase tracking-widest text-white/30">
+                Belum tersedia • Coming Soon
+              </p>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
