@@ -82,7 +82,7 @@ function fmt(s: number) {
 function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
-  const commentIdRef = useRef(1000);
+  const channelRef = useRef<BroadcastChannel | null>(null);
 
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -93,16 +93,57 @@ function Index() {
   const [speed, setSpeed] = useState(1);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [comments, setComments] = useState<UserComment[]>(() =>
-    SEED_COMMENTS.map((c, i) => ({
-      ...c,
-      id: i,
-      time: Date.now() - (i + 1) * 1000 * 60 * (15 + i * 30),
-    })),
-  );
+  const [me, setMe] = useState<{ name: string; color: string } | null>(null);
+  const [comments, setComments] = useState<UserComment[]>([]);
   const [, setTick] = useState(0);
 
   const current = EPISODES[idx];
+
+  // initialize identity + load chat history + realtime channel
+  useEffect(() => {
+    try {
+      const rawUser = localStorage.getItem(CHAT_USER_KEY);
+      if (rawUser) {
+        setMe(JSON.parse(rawUser));
+      } else {
+        const u = { name: randomNick(), color: randomColor() };
+        localStorage.setItem(CHAT_USER_KEY, JSON.stringify(u));
+        setMe(u);
+      }
+      const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (raw) setComments(JSON.parse(raw));
+    } catch {}
+
+    if (typeof BroadcastChannel !== "undefined") {
+      const ch = new BroadcastChannel("zone-hdd-chat");
+      channelRef.current = ch;
+      ch.onmessage = (e) => {
+        const msg = e.data as { type: string; payload: UserComment } | { type: "like"; id: string };
+        if (msg.type === "new" && "payload" in msg) {
+          setComments((cs) => (cs.some((c) => c.id === msg.payload.id) ? cs : [msg.payload, ...cs]));
+        } else if (msg.type === "like" && "id" in msg) {
+          setComments((cs) => cs.map((c) => (c.id === msg.id ? { ...c, likes: c.likes + 1 } : c)));
+        }
+      };
+    }
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === CHAT_STORAGE_KEY && e.newValue) {
+        try { setComments(JSON.parse(e.newValue)); } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      channelRef.current?.close();
+      channelRef.current = null;
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  // persist chat
+  useEffect(() => {
+    try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(comments.slice(0, 200))); } catch {}
+  }, [comments]);
 
   // refresh "time ago" labels every minute
   useEffect(() => {
@@ -149,21 +190,22 @@ function Index() {
   const sendComment = (e: React.FormEvent) => {
     e.preventDefault();
     const t = input.trim();
-    if (!t) return;
+    if (!t || !me) return;
     const newC: UserComment = {
-      id: ++commentIdRef.current,
-      user: "Kamu",
-      avatarColor: NEON,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      user: me.name,
+      avatarColor: me.color,
       text: t,
       time: Date.now(),
       likes: 0,
       liked: false,
     };
     setComments((c) => [newC, ...c]);
+    channelRef.current?.postMessage({ type: "new", payload: newC });
     setInput("");
   };
 
-  const toggleLike = (id: number) => {
+  const toggleLike = (id: string) => {
     setComments((cs) =>
       cs.map((c) =>
         c.id === id
@@ -171,9 +213,11 @@ function Index() {
           : c,
       ),
     );
+    const target = comments.find((c) => c.id === id);
+    if (target && !target.liked) {
+      channelRef.current?.postMessage({ type: "like", id });
+    }
   };
-
-  const progress = dur ? (time / dur) * 100 : 0;
 
 
   return (
