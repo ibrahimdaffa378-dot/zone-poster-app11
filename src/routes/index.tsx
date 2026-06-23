@@ -31,7 +31,7 @@ const EPISODES: Episode[] = [
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2];
 
 type UserComment = {
-  id: number;
+  id: string;
   user: string;
   avatarColor: string;
   text: string;
@@ -40,11 +40,23 @@ type UserComment = {
   liked: boolean;
 };
 
-const SEED_COMMENTS: Omit<UserComment, "id" | "time">[] = [
-  { user: "RyuFan88", avatarColor: "#39FF7A", text: "Animasinya gokil sih, fight scene episode ini juara! 🔥", likes: 124, liked: false },
-  { user: "Cultivator_Lei", avatarColor: "#7afcff", text: "Lei Zhen vibes-nya dapet banget, gak sabar ep berikutnya.", likes: 87, liked: false },
-  { user: "AnimeIndo", avatarColor: "#ffe66d", text: "Bangga animasi lokal kualitasnya makin naik 👏", likes: 56, liked: false },
-  { user: "NagaAwal", avatarColor: "#ff8fb1", text: "Sound design-nya nampol, headphone wajib!", likes: 33, liked: false },
+const AVATAR_COLORS = ["#39FF7A", "#7afcff", "#ffe66d", "#ff8fb1", "#c4a8ff", "#ffb86b", "#8affc1"];
+const NICK_PARTS_A = ["Naga", "Lei", "Ryu", "Shen", "Kultivator", "Bayangan", "Awan", "Petir"];
+const NICK_PARTS_B = ["Awal", "Senja", "Liar", "Sakti", "Muda", "Abadi", "Kelana", "Fajar"];
+const randomNick = () =>
+  `${NICK_PARTS_A[Math.floor(Math.random() * NICK_PARTS_A.length)]}${NICK_PARTS_B[Math.floor(Math.random() * NICK_PARTS_B.length)]}${Math.floor(Math.random() * 99)}`;
+const randomColor = () => AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+
+const CHAT_STORAGE_KEY = "zone-hdd-chat-v1";
+const CHAT_USER_KEY = "zone-hdd-chat-user-v1";
+
+const COMING_SOON: { num: number; title: string }[] = [
+  { num: 1, title: "Petualangan Dimulai" },
+  { num: 2, title: "Sepeda Baru Adit" },
+  { num: 3, title: "Bakso Sopo Jarwo" },
+  { num: 4, title: "Misi Haji Udin" },
+  { num: 5, title: "Hari yang Sibuk" },
+  { num: 6, title: "Persahabatan Sejati" },
 ];
 
 const NEON = "#39FF7A";
