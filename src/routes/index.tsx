@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ep1 from "@/assets/ep1.mp4.asset.json";
 import ep2 from "@/assets/ep2.mp4.asset.json";
 import ep3 from "@/assets/ep3.mp4.asset.json";
