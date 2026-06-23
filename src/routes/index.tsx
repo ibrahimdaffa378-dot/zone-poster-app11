@@ -219,6 +219,10 @@ function Index() {
     }
   };
 
+  const progress = dur ? (time / dur) * 100 : 0;
+
+
+
 
   return (
     <div className="min-h-screen bg-[#0a0d0b] text-white">
