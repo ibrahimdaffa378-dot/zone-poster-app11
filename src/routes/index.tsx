@@ -436,25 +436,36 @@ function Index() {
 
         {/* Comments section */}
         <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <h3 className="text-sm font-black uppercase tracking-widest">Komentar</h3>
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
-              {comments.length}
-            </span>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-black uppercase tracking-widest">Live Chat</h3>
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
+                {comments.length}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-white/50">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: NEON }} />
+                Realtime
+              </span>
+            </div>
+            {me && (
+              <span className="text-[10px] text-white/40">
+                kamu: <span style={{ color: me.color }}>@{me.name}</span>
+              </span>
+            )}
           </div>
 
           <form onSubmit={sendComment} className="mb-4 flex items-start gap-2">
             <div
               className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black"
-              style={{ background: NEON }}
+              style={{ background: me?.color ?? NEON }}
             >
-              K
+              {(me?.name ?? "K").charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Tulis komentar..."
+                placeholder="Ajak ngobrol publik tentang episode ini..."
                 className="w-full border-b border-white/10 bg-transparent px-1 py-2 text-sm placeholder:text-white/30 focus:border-[color:var(--neon)] focus:outline-none"
                 style={{ ["--neon" as never]: NEON }}
                 maxLength={300}
