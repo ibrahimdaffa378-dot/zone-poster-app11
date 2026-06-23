@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ep1 from "@/assets/ep1.mp4.asset.json";
 import ep2 from "@/assets/ep2.mp4.asset.json";
 import ep3 from "@/assets/ep3.mp4.asset.json";
@@ -29,22 +29,35 @@ const EPISODES: Episode[] = [
 
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2];
 
-const AUTO_DANMAKU: { t: number; text: string }[] = [
-  { t: 2, text: "Keren banget animasinya! 🔥" },
-  { t: 5, text: "Lei Zhen bangkit!" },
-  { t: 9, text: "Naga Awal muncul! 🐉" },
-  { t: 13, text: "Gilaaa effectnya wkwk" },
-  { t: 18, text: "Animasi Indo makin keren" },
-  { t: 24, text: "Auto subscribe ✨" },
-  { t: 30, text: "Sound design-nya nampol" },
-  { t: 38, text: "Plot twist incoming..." },
-  { t: 46, text: "Wuuusssh ⚡" },
-  { t: 55, text: "Naga Awal OP!" },
+type UserComment = {
+  id: number;
+  user: string;
+  avatarColor: string;
+  text: string;
+  time: number; // epoch ms
+  likes: number;
+  liked: boolean;
+};
+
+const SEED_COMMENTS: Omit<UserComment, "id" | "time">[] = [
+  { user: "RyuFan88", avatarColor: "#39FF7A", text: "Animasinya gokil sih, fight scene episode ini juara! 🔥", likes: 124, liked: false },
+  { user: "Cultivator_Lei", avatarColor: "#7afcff", text: "Lei Zhen vibes-nya dapet banget, gak sabar ep berikutnya.", likes: 87, liked: false },
+  { user: "AnimeIndo", avatarColor: "#ffe66d", text: "Bangga animasi lokal kualitasnya makin naik 👏", likes: 56, liked: false },
+  { user: "NagaAwal", avatarColor: "#ff8fb1", text: "Sound design-nya nampol, headphone wajib!", likes: 33, liked: false },
 ];
 
-type Bullet = { id: number; text: string; row: number; color: string };
-
 const NEON = "#39FF7A";
+
+function timeAgo(ms: number) {
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 60) return `${s} dtk lalu`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} mnt lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  return `${d} hari lalu`;
+}
 
 function fmt(s: number) {
   if (!isFinite(s)) return "0:00";
@@ -56,8 +69,7 @@ function fmt(s: number) {
 function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
-  const firedRef = useRef<Set<string>>(new Set());
-  const bulletIdRef = useRef(0);
+  const commentIdRef = useRef(1000);
 
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -67,14 +79,25 @@ function Index() {
   const [muted, setMuted] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [speedOpen, setSpeedOpen] = useState(false);
-  const [bullets, setBullets] = useState<Bullet[]>([]);
   const [input, setInput] = useState("");
-  const [comments, setComments] = useState<string[]>([]);
+  const [comments, setComments] = useState<UserComment[]>(() =>
+    SEED_COMMENTS.map((c, i) => ({
+      ...c,
+      id: i,
+      time: Date.now() - (i + 1) * 1000 * 60 * (15 + i * 30),
+    })),
+  );
+  const [, setTick] = useState(0);
 
   const current = EPISODES[idx];
 
+  // refresh "time ago" labels every minute
   useEffect(() => {
-    firedRef.current.clear();
+    const id = window.setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
     setTime(0);
     setPlaying(false);
   }, [idx]);
@@ -89,29 +112,10 @@ function Index() {
     }
   }, [volume, muted]);
 
-  const launchBullet = (text: string) => {
-    const id = ++bulletIdRef.current;
-    const row = Math.floor(Math.random() * 8);
-    const palette = [NEON, "#ffffff", "#ffe66d", "#7afcff", "#ff8fb1"];
-    const color = palette[Math.floor(Math.random() * palette.length)];
-    setBullets((b) => [...b, { id, text, row, color }]);
-    window.setTimeout(() => {
-      setBullets((b) => b.filter((x) => x.id !== id));
-    }, 9000);
-  };
-
   const onTimeUpdate = () => {
     const v = videoRef.current;
     if (!v) return;
     setTime(v.currentTime);
-    const sec = Math.floor(v.currentTime);
-    AUTO_DANMAKU.forEach((c) => {
-      const key = `${idx}-${c.t}`;
-      if (sec === c.t && !firedRef.current.has(key)) {
-        firedRef.current.add(key);
-        launchBullet(c.text);
-      }
-    });
   };
 
   const togglePlay = () => {
@@ -133,54 +137,39 @@ function Index() {
     e.preventDefault();
     const t = input.trim();
     if (!t) return;
-    launchBullet(t);
-    setComments((c) => [t, ...c].slice(0, 30));
+    const newC: UserComment = {
+      id: ++commentIdRef.current,
+      user: "Kamu",
+      avatarColor: NEON,
+      text: t,
+      time: Date.now(),
+      likes: 0,
+      liked: false,
+    };
+    setComments((c) => [newC, ...c]);
     setInput("");
+  };
+
+  const toggleLike = (id: number) => {
+    setComments((cs) =>
+      cs.map((c) =>
+        c.id === id
+          ? { ...c, liked: !c.liked, likes: c.likes + (c.liked ? -1 : 1) }
+          : c,
+      ),
+    );
   };
 
   const progress = dur ? (time / dur) * 100 : 0;
 
-  const bulletNodes = useMemo(
-    () =>
-      bullets.map((b) => (
-        <div
-          key={b.id}
-          className="danmaku-bullet"
-          style={{
-            top: `${4 + b.row * 11}%`,
-            color: b.color,
-            textShadow: "0 0 6px rgba(0,0,0,.9), 0 1px 2px rgba(0,0,0,.9)",
-          }}
-        >
-          {b.text}
-        </div>
-      )),
-    [bullets],
-  );
 
   return (
     <div className="min-h-screen bg-[#0a0d0b] text-white">
       <style>{`
-        @keyframes danmaku-fly {
-          from { transform: translateX(0); }
-          to { transform: translateX(-120vw); }
-        }
-        .danmaku-bullet {
-          position: absolute;
-          left: 100%;
-          white-space: nowrap;
-          font-weight: 600;
-          font-size: 14px;
-          letter-spacing: .2px;
-          animation: danmaku-fly 9s linear forwards;
-          pointer-events: none;
-        }
-        @media (min-width: 768px) {
-          .danmaku-bullet { font-size: 16px; }
-        }
         .neon-glow { box-shadow: 0 0 0 1px rgba(57,255,122,.35), 0 0 24px rgba(57,255,122,.15); }
         .range-neon { accent-color: ${NEON}; }
       `}</style>
+
 
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur">
@@ -269,9 +258,6 @@ function Index() {
               onLoadedMetadata={(e) => setDur(e.currentTarget.duration)}
               playsInline
             />
-            <div className="pointer-events-none absolute inset-0 overflow-hidden">
-              {bulletNodes}
-            </div>
 
             {!playing && (
               <button
@@ -387,44 +373,96 @@ function Index() {
           </h2>
         </div>
 
-        {/* Comment input */}
-        <form
-          onSubmit={sendComment}
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2"
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Kirim komentar melayang..."
-            className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm placeholder:text-white/30 focus:outline-none"
-            maxLength={80}
-          />
-          <button
-            type="submit"
-            className="shrink-0 rounded-md px-4 py-2 text-sm font-bold text-black transition hover:brightness-110"
-            style={{ background: NEON }}
-          >
-            Kirim
-          </button>
-        </form>
+        {/* Comments section */}
+        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-black uppercase tracking-widest">Komentar</h3>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
+              {comments.length}
+            </span>
+          </div>
 
-        {/* Comment history */}
-        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-          <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">
-            Riwayat Komentar
-          </p>
+          <form onSubmit={sendComment} className="mb-4 flex items-start gap-2">
+            <div
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black"
+              style={{ background: NEON }}
+            >
+              K
+            </div>
+            <div className="min-w-0 flex-1">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Tulis komentar..."
+                className="w-full border-b border-white/10 bg-transparent px-1 py-2 text-sm placeholder:text-white/30 focus:border-[color:var(--neon)] focus:outline-none"
+                style={{ ["--neon" as never]: NEON }}
+                maxLength={300}
+              />
+              {input.trim() && (
+                <div className="mt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInput("")}
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-full px-4 py-1.5 text-xs font-bold text-black transition hover:brightness-110"
+                    style={{ background: NEON }}
+                  >
+                    Kirim
+                  </button>
+                </div>
+              )}
+            </div>
+          </form>
+
           {comments.length === 0 ? (
             <p className="text-xs text-white/30">Belum ada komentar. Jadilah yang pertama!</p>
           ) : (
-            <ul className="space-y-1.5">
-              {comments.map((c, i) => (
-                <li key={i} className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white/80">
-                  {c}
+            <ul className="space-y-4">
+              {comments.map((c) => (
+                <li key={c.id} className="flex items-start gap-2">
+                  <div
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black"
+                    style={{ background: c.avatarColor }}
+                  >
+                    {c.user.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-bold text-white/90">@{c.user}</span>
+                      <span className="text-[10px] text-white/40">{timeAgo(c.time)}</span>
+                    </div>
+                    <p className="mt-0.5 break-words text-sm text-white/85">{c.text}</p>
+                    <div className="mt-1 flex items-center gap-3">
+                      <button
+                        onClick={() => toggleLike(c.id)}
+                        className="flex items-center gap-1 text-xs text-white/60 hover:text-white"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill={c.liked ? NEON : "none"}
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M7 22V11M2 13v7a2 2 0 0 0 2 2h3V11H4a2 2 0 0 0-2 2zm5-2 4-9a3 3 0 0 1 3 3v3h4a2 2 0 0 1 2 2l-1.5 7a2 2 0 0 1-2 1.5H7" />
+                        </svg>
+                        <span style={c.liked ? { color: NEON } : undefined}>{c.likes}</span>
+                      </button>
+                      <button className="text-xs text-white/50 hover:text-white">Balas</button>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </section>
+
 
         {/* Episode number grid */}
         <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
