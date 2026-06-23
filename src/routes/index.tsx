@@ -55,6 +55,7 @@ function fmt(s: number) {
 
 function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   const firedRef = useRef<Set<string>>(new Set());
   const bulletIdRef = useRef(0);
 
