@@ -29,7 +29,7 @@ const EPISODES: Episode[] = [
 
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2];
 
-type Comment = {
+type UserComment = {
   id: number;
   user: string;
   avatarColor: string;
@@ -39,7 +39,7 @@ type Comment = {
   liked: boolean;
 };
 
-const SEED_COMMENTS: Omit<Comment, "id" | "time">[] = [
+const SEED_COMMENTS: Omit<UserComment, "id" | "time">[] = [
   { user: "RyuFan88", avatarColor: "#39FF7A", text: "Animasinya gokil sih, fight scene episode ini juara! 🔥", likes: 124, liked: false },
   { user: "Cultivator_Lei", avatarColor: "#7afcff", text: "Lei Zhen vibes-nya dapet banget, gak sabar ep berikutnya.", likes: 87, liked: false },
   { user: "AnimeIndo", avatarColor: "#ffe66d", text: "Bangga animasi lokal kualitasnya makin naik 👏", likes: 56, liked: false },
@@ -80,7 +80,7 @@ function Index() {
   const [speed, setSpeed] = useState(1);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [comments, setComments] = useState<Comment[]>(() =>
+  const [comments, setComments] = useState<UserComment[]>(() =>
     SEED_COMMENTS.map((c, i) => ({
       ...c,
       id: i,
@@ -137,7 +137,7 @@ function Index() {
     e.preventDefault();
     const t = input.trim();
     if (!t) return;
-    const newC: Comment = {
+    const newC: UserComment = {
       id: ++commentIdRef.current,
       user: "Kamu",
       avatarColor: NEON,
@@ -389,7 +389,7 @@ function Index() {
           </h2>
         </div>
 
-        {/* Comment input */}
+        {/* UserComment input */}
         <form
           onSubmit={sendComment}
           className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2"
@@ -410,7 +410,7 @@ function Index() {
           </button>
         </form>
 
-        {/* Comment history */}
+        {/* UserComment history */}
         <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
           <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">
             Riwayat Komentar
