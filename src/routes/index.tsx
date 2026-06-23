@@ -274,9 +274,6 @@ function Index() {
               onLoadedMetadata={(e) => setDur(e.currentTarget.duration)}
               playsInline
             />
-            <div className="pointer-events-none absolute inset-0 overflow-hidden">
-              {bulletNodes}
-            </div>
 
             {!playing && (
               <button
