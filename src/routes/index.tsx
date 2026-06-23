@@ -6,6 +6,7 @@ import ep3 from "@/assets/ep3.mp4.asset.json";
 import ep4 from "@/assets/ep4.mp4.asset.json";
 import ep5 from "@/assets/ep5.mp4.asset.json";
 import poster from "@/assets/hdd-poster.asset.json";
+import aditPoster from "@/assets/adit-sopo-jarwo.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,7 +31,7 @@ const EPISODES: Episode[] = [
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2];
 
 type UserComment = {
-  id: number;
+  id: string;
   user: string;
   avatarColor: string;
   text: string;
@@ -39,11 +40,23 @@ type UserComment = {
   liked: boolean;
 };
 
-const SEED_COMMENTS: Omit<UserComment, "id" | "time">[] = [
-  { user: "RyuFan88", avatarColor: "#39FF7A", text: "Animasinya gokil sih, fight scene episode ini juara! 🔥", likes: 124, liked: false },
-  { user: "Cultivator_Lei", avatarColor: "#7afcff", text: "Lei Zhen vibes-nya dapet banget, gak sabar ep berikutnya.", likes: 87, liked: false },
-  { user: "AnimeIndo", avatarColor: "#ffe66d", text: "Bangga animasi lokal kualitasnya makin naik 👏", likes: 56, liked: false },
-  { user: "NagaAwal", avatarColor: "#ff8fb1", text: "Sound design-nya nampol, headphone wajib!", likes: 33, liked: false },
+const AVATAR_COLORS = ["#39FF7A", "#7afcff", "#ffe66d", "#ff8fb1", "#c4a8ff", "#ffb86b", "#8affc1"];
+const NICK_PARTS_A = ["Naga", "Lei", "Ryu", "Shen", "Kultivator", "Bayangan", "Awan", "Petir"];
+const NICK_PARTS_B = ["Awal", "Senja", "Liar", "Sakti", "Muda", "Abadi", "Kelana", "Fajar"];
+const randomNick = () =>
+  `${NICK_PARTS_A[Math.floor(Math.random() * NICK_PARTS_A.length)]}${NICK_PARTS_B[Math.floor(Math.random() * NICK_PARTS_B.length)]}${Math.floor(Math.random() * 99)}`;
+const randomColor = () => AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+
+const CHAT_STORAGE_KEY = "zone-hdd-chat-v1";
+const CHAT_USER_KEY = "zone-hdd-chat-user-v1";
+
+const COMING_SOON: { num: number; title: string }[] = [
+  { num: 1, title: "Petualangan Dimulai" },
+  { num: 2, title: "Sepeda Baru Adit" },
+  { num: 3, title: "Bakso Sopo Jarwo" },
+  { num: 4, title: "Misi Haji Udin" },
+  { num: 5, title: "Hari yang Sibuk" },
+  { num: 6, title: "Persahabatan Sejati" },
 ];
 
 const NEON = "#39FF7A";
@@ -69,7 +82,7 @@ function fmt(s: number) {
 function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
-  const commentIdRef = useRef(1000);
+  const channelRef = useRef<BroadcastChannel | null>(null);
 
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -80,16 +93,57 @@ function Index() {
   const [speed, setSpeed] = useState(1);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [comments, setComments] = useState<UserComment[]>(() =>
-    SEED_COMMENTS.map((c, i) => ({
-      ...c,
-      id: i,
-      time: Date.now() - (i + 1) * 1000 * 60 * (15 + i * 30),
-    })),
-  );
+  const [me, setMe] = useState<{ name: string; color: string } | null>(null);
+  const [comments, setComments] = useState<UserComment[]>([]);
   const [, setTick] = useState(0);
 
   const current = EPISODES[idx];
+
+  // initialize identity + load chat history + realtime channel
+  useEffect(() => {
+    try {
+      const rawUser = localStorage.getItem(CHAT_USER_KEY);
+      if (rawUser) {
+        setMe(JSON.parse(rawUser));
+      } else {
+        const u = { name: randomNick(), color: randomColor() };
+        localStorage.setItem(CHAT_USER_KEY, JSON.stringify(u));
+        setMe(u);
+      }
+      const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (raw) setComments(JSON.parse(raw));
+    } catch {}
+
+    if (typeof BroadcastChannel !== "undefined") {
+      const ch = new BroadcastChannel("zone-hdd-chat");
+      channelRef.current = ch;
+      ch.onmessage = (e) => {
+        const msg = e.data as { type: string; payload: UserComment } | { type: "like"; id: string };
+        if (msg.type === "new" && "payload" in msg) {
+          setComments((cs) => (cs.some((c) => c.id === msg.payload.id) ? cs : [msg.payload, ...cs]));
+        } else if (msg.type === "like" && "id" in msg) {
+          setComments((cs) => cs.map((c) => (c.id === msg.id ? { ...c, likes: c.likes + 1 } : c)));
+        }
+      };
+    }
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === CHAT_STORAGE_KEY && e.newValue) {
+        try { setComments(JSON.parse(e.newValue)); } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      channelRef.current?.close();
+      channelRef.current = null;
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  // persist chat
+  useEffect(() => {
+    try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(comments.slice(0, 200))); } catch {}
+  }, [comments]);
 
   // refresh "time ago" labels every minute
   useEffect(() => {
@@ -136,21 +190,22 @@ function Index() {
   const sendComment = (e: React.FormEvent) => {
     e.preventDefault();
     const t = input.trim();
-    if (!t) return;
+    if (!t || !me) return;
     const newC: UserComment = {
-      id: ++commentIdRef.current,
-      user: "Kamu",
-      avatarColor: NEON,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      user: me.name,
+      avatarColor: me.color,
       text: t,
       time: Date.now(),
       likes: 0,
       liked: false,
     };
     setComments((c) => [newC, ...c]);
+    channelRef.current?.postMessage({ type: "new", payload: newC });
     setInput("");
   };
 
-  const toggleLike = (id: number) => {
+  const toggleLike = (id: string) => {
     setComments((cs) =>
       cs.map((c) =>
         c.id === id
@@ -158,9 +213,15 @@ function Index() {
           : c,
       ),
     );
+    const target = comments.find((c) => c.id === id);
+    if (target && !target.liked) {
+      channelRef.current?.postMessage({ type: "like", id });
+    }
   };
 
   const progress = dur ? (time / dur) * 100 : 0;
+
+
 
 
   return (
@@ -375,25 +436,36 @@ function Index() {
 
         {/* Comments section */}
         <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <h3 className="text-sm font-black uppercase tracking-widest">Komentar</h3>
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
-              {comments.length}
-            </span>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-black uppercase tracking-widest">Live Chat</h3>
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
+                {comments.length}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-white/50">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: NEON }} />
+                Realtime
+              </span>
+            </div>
+            {me && (
+              <span className="text-[10px] text-white/40">
+                kamu: <span style={{ color: me.color }}>@{me.name}</span>
+              </span>
+            )}
           </div>
 
           <form onSubmit={sendComment} className="mb-4 flex items-start gap-2">
             <div
               className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black"
-              style={{ background: NEON }}
+              style={{ background: me?.color ?? NEON }}
             >
-              K
+              {(me?.name ?? "K").charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Tulis komentar..."
+                placeholder="Ajak ngobrol publik tentang episode ini..."
                 className="w-full border-b border-white/10 bg-transparent px-1 py-2 text-sm placeholder:text-white/30 focus:border-[color:var(--neon)] focus:outline-none"
                 style={{ ["--neon" as never]: NEON }}
                 maxLength={300}
@@ -494,6 +566,62 @@ function Index() {
             })}
           </div>
         </div>
+
+        {/* Coming Soon — Adit & Sopo Jarwo */}
+        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-black uppercase tracking-widest">Akan Datang</h3>
+            <span
+              className="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+              style={{ borderColor: NEON, color: NEON }}
+            >
+              Coming Soon
+            </span>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="relative aspect-[3/4] w-28 shrink-0 overflow-hidden rounded-lg border border-white/10">
+              <img
+                src={aditPoster.url}
+                alt="Adit & Sopo Jarwo poster"
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <span
+                className="absolute left-1 top-1 rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-black"
+                style={{ background: NEON }}
+              >
+                Soon
+              </span>
+              <span className="absolute inset-x-0 bottom-1 text-center text-[10px] font-black uppercase tracking-widest text-white drop-shadow">
+                Coming Soon
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-base font-black leading-tight">
+                Adit & Sopo <span style={{ color: NEON }}>Jarwo</span>
+              </h4>
+              <p className="mt-1 text-[11px] text-white/60">
+                Petualangan seru Adit, Dennis, dan kawan-kawan di kampung. Episode 1–6 segera hadir.
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-1.5">
+                {COMING_SOON.map((e) => (
+                  <div
+                    key={e.num}
+                    className="rounded-md border border-dashed border-white/15 bg-black/40 px-2 py-1.5 text-[10px] text-white/60"
+                  >
+                    <div className="font-bold text-white/80">Ep {e.num}</div>
+                    <div className="truncate">{e.title}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] uppercase tracking-widest text-white/30">
+                Belum tersedia • Coming Soon
+              </p>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
