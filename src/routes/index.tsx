@@ -5,6 +5,7 @@ import ep2 from "@/assets/ep2.mp4.asset.json";
 import ep3 from "@/assets/ep3.mp4.asset.json";
 import ep4 from "@/assets/ep4.mp4.asset.json";
 import ep5 from "@/assets/ep5.mp4.asset.json";
+import poster from "@/assets/hdd-poster.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -54,6 +55,7 @@ function fmt(s: number) {
 
 function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   const firedRef = useRef<Set<string>>(new Set());
   const bulletIdRef = useRef(0);
 
@@ -207,8 +209,54 @@ function Index() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-5 space-y-4">
+        {/* Hero Banner */}
+        <section className="relative overflow-hidden rounded-2xl border border-white/10">
+          <div className="relative aspect-[3/4] sm:aspect-[16/9] w-full">
+            <img
+              src={poster.url}
+              alt="Heaven Defying Dragonforce poster"
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="eager"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/10" />
+            <div
+              className="pointer-events-none absolute -inset-px rounded-2xl"
+              style={{ boxShadow: `inset 0 0 60px ${NEON}22` }}
+            />
+            <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 space-y-3">
+              <span
+                className="inline-block rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-widest"
+                style={{ borderColor: NEON, color: NEON }}
+              >
+                Eksklusif • Season 1
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-black leading-tight drop-shadow-lg">
+                Heaven Defying <span style={{ color: NEON }}>Dragonforce</span>
+              </h2>
+              <p className="max-w-lg text-xs sm:text-sm text-white/75 line-clamp-3">
+                Di tanah yang dikuasai kultivator kejam, Lei Zhen bangkit dengan
+                kekuatan Naga Awal untuk melawan takdir. Petualangan epik penuh
+                pertarungan dahsyat dan rahasia kuno menanti.
+              </p>
+              <button
+                onClick={() => {
+                  playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  setTimeout(() => videoRef.current?.play().catch(() => {}), 600);
+                }}
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-black text-black transition hover:brightness-110"
+                style={{ background: NEON, boxShadow: `0 0 24px ${NEON}80` }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                Tonton Sekarang
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* Player */}
-        <div className="relative overflow-hidden rounded-xl bg-black neon-glow">
+        <div ref={playerRef} className="relative overflow-hidden rounded-xl bg-black neon-glow scroll-mt-4">
           <div className="relative aspect-video w-full">
             <video
               ref={videoRef}
