@@ -373,44 +373,96 @@ function Index() {
           </h2>
         </div>
 
-        {/* UserComment input */}
-        <form
-          onSubmit={sendComment}
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2"
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Kirim komentar melayang..."
-            className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm placeholder:text-white/30 focus:outline-none"
-            maxLength={80}
-          />
-          <button
-            type="submit"
-            className="shrink-0 rounded-md px-4 py-2 text-sm font-bold text-black transition hover:brightness-110"
-            style={{ background: NEON }}
-          >
-            Kirim
-          </button>
-        </form>
+        {/* Comments section */}
+        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-black uppercase tracking-widest">Komentar</h3>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
+              {comments.length}
+            </span>
+          </div>
 
-        {/* UserComment history */}
-        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-          <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">
-            Riwayat Komentar
-          </p>
+          <form onSubmit={sendComment} className="mb-4 flex items-start gap-2">
+            <div
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black"
+              style={{ background: NEON }}
+            >
+              K
+            </div>
+            <div className="min-w-0 flex-1">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Tulis komentar..."
+                className="w-full border-b border-white/10 bg-transparent px-1 py-2 text-sm placeholder:text-white/30 focus:border-[color:var(--neon)] focus:outline-none"
+                style={{ ["--neon" as never]: NEON }}
+                maxLength={300}
+              />
+              {input.trim() && (
+                <div className="mt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInput("")}
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-full px-4 py-1.5 text-xs font-bold text-black transition hover:brightness-110"
+                    style={{ background: NEON }}
+                  >
+                    Kirim
+                  </button>
+                </div>
+              )}
+            </div>
+          </form>
+
           {comments.length === 0 ? (
             <p className="text-xs text-white/30">Belum ada komentar. Jadilah yang pertama!</p>
           ) : (
-            <ul className="space-y-1.5">
-              {comments.map((c, i) => (
-                <li key={i} className="rounded-md bg-white/5 px-3 py-1.5 text-sm text-white/80">
-                  {c}
+            <ul className="space-y-4">
+              {comments.map((c) => (
+                <li key={c.id} className="flex items-start gap-2">
+                  <div
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black"
+                    style={{ background: c.avatarColor }}
+                  >
+                    {c.user.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-bold text-white/90">@{c.user}</span>
+                      <span className="text-[10px] text-white/40">{timeAgo(c.time)}</span>
+                    </div>
+                    <p className="mt-0.5 break-words text-sm text-white/85">{c.text}</p>
+                    <div className="mt-1 flex items-center gap-3">
+                      <button
+                        onClick={() => toggleLike(c.id)}
+                        className="flex items-center gap-1 text-xs text-white/60 hover:text-white"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill={c.liked ? NEON : "none"}
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M7 22V11M2 13v7a2 2 0 0 0 2 2h3V11H4a2 2 0 0 0-2 2zm5-2 4-9a3 3 0 0 1 3 3v3h4a2 2 0 0 1 2 2l-1.5 7a2 2 0 0 1-2 1.5H7" />
+                        </svg>
+                        <span style={c.liked ? { color: NEON } : undefined}>{c.likes}</span>
+                      </button>
+                      <button className="text-xs text-white/50 hover:text-white">Balas</button>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </section>
+
 
         {/* Episode number grid */}
         <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
