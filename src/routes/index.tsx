@@ -274,12 +274,21 @@ function Index() {
               style={{ boxShadow: `inset 0 0 60px ${NEON}22` }}
             />
             <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 space-y-3">
-              <span
-                className="inline-block rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-widest"
-                style={{ borderColor: NEON, color: NEON }}
-              >
-                Eksklusif • Season 1
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-black"
+                  style={{ background: NEON, boxShadow: `0 0 12px ${NEON}80` }}
+                >
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-black/70" />
+                  Tersedia • Sedang Tayang
+                </span>
+                <span
+                  className="inline-block rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-widest"
+                  style={{ borderColor: NEON, color: NEON }}
+                >
+                  Eksklusif • Season 1
+                </span>
+              </div>
               <h2 className="text-2xl sm:text-4xl font-black leading-tight drop-shadow-lg">
                 Heaven Defying <span style={{ color: NEON }}>Dragonforce</span>
               </h2>
