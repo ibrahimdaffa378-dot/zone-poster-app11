@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ep1 from "@/assets/ep1.mp4.asset.json";
 import ep2 from "@/assets/ep2.mp4.asset.json";
 import ep3 from "@/assets/ep3.mp4.asset.json";
 import ep4 from "@/assets/ep4.mp4.asset.json";
 import ep5 from "@/assets/ep5.mp4.asset.json";
 import poster from "@/assets/hdd-poster.asset.json";
-import aditPoster from "@/assets/adit-sopo-jarwo.asset.json";
+import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
+import type { Session } from "@supabase/supabase-js";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -19,7 +21,6 @@ export const Route = createFileRoute("/")({
 });
 
 type Episode = { num: number; title: string; src: string };
-
 const EPISODES: Episode[] = [
   { num: 1, title: "Kebangkitan", src: ep1.url },
   { num: 2, title: "Pertarungan Pertama", src: ep2.url },
@@ -27,49 +28,33 @@ const EPISODES: Episode[] = [
   { num: 4, title: "Bentrokan Bayangan", src: ep4.url },
   { num: 5, title: "Jejak Akar Naga", src: ep5.url },
 ];
-
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2];
-
-type UserComment = {
-  id: string;
-  user: string;
-  avatarColor: string;
-  text: string;
-  time: number; // epoch ms
-  likes: number;
-  liked: boolean;
-};
-
-const AVATAR_COLORS = ["#39FF7A", "#7afcff", "#ffe66d", "#ff8fb1", "#c4a8ff", "#ffb86b", "#8affc1"];
-const NICK_PARTS_A = ["Naga", "Lei", "Ryu", "Shen", "Kultivator", "Bayangan", "Awan", "Petir"];
-const NICK_PARTS_B = ["Awal", "Senja", "Liar", "Sakti", "Muda", "Abadi", "Kelana", "Fajar"];
-const randomNick = () =>
-  `${NICK_PARTS_A[Math.floor(Math.random() * NICK_PARTS_A.length)]}${NICK_PARTS_B[Math.floor(Math.random() * NICK_PARTS_B.length)]}${Math.floor(Math.random() * 99)}`;
-const randomColor = () => AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
-
-const CHAT_STORAGE_KEY = "zone-hdd-chat-v1";
-const CHAT_USER_KEY = "zone-hdd-chat-user-v1";
-
-const COMING_SOON: { num: number; title: string }[] = [
-  { num: 1, title: "Petualangan Dimulai" },
-  { num: 2, title: "Sepeda Baru Adit" },
-  { num: 3, title: "Bakso Sopo Jarwo" },
-  { num: 4, title: "Misi Haji Udin" },
-  { num: 5, title: "Hari yang Sibuk" },
-  { num: 6, title: "Persahabatan Sejati" },
-];
-
 const NEON = "#39FF7A";
 
-function timeAgo(ms: number) {
-  const s = Math.floor((Date.now() - ms) / 1000);
-  if (s < 60) return `${s} dtk lalu`;
+type Profile = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  bio: string | null;
+  avatar_color: string;
+};
+
+type ChatMessage = {
+  id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profile?: Profile | null;
+};
+
+function timeAgo(iso: string) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return `${s}d`;
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m} mnt lalu`;
+  if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} jam lalu`;
-  const d = Math.floor(h / 24);
-  return `${d} hari lalu`;
+  if (h < 24) return `${h}j`;
+  return `${Math.floor(h / 24)}h`;
 }
 
 function fmt(s: number) {
@@ -79,10 +64,318 @@ function fmt(s: number) {
   return `${m}:${sec}`;
 }
 
+// ---------------- LOGIN GATE ----------------
+function LoginGate({ onSignedIn }: { onSignedIn: () => void }) {
+  const [error, setError] = useState<{ kind: "x" | "fb"; msg: string } | null>(null);
+  const [loading, setLoading] = useState<null | "google">(null);
+
+  const signInGoogle = async () => {
+    setError(null);
+    setLoading("google");
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        setError({ kind: "x", msg: "Gagal masuk dengan Google. Coba lagi." });
+        setLoading(null);
+        return;
+      }
+      if (!result.redirected) onSignedIn();
+    } catch {
+      setLoading(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#070907] text-white">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-5 py-10">
+        <div className="mb-6 flex flex-col items-center">
+          <div
+            className="grid h-14 w-14 place-items-center rounded-2xl text-2xl font-black text-black"
+            style={{ background: NEON, boxShadow: `0 0 36px ${NEON}80` }}
+          >
+            Z
+          </div>
+          <h1 className="mt-4 text-2xl font-black tracking-widest">ZONE</h1>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-white/40">
+            Heaven Defying Dragonforce
+          </p>
+        </div>
+
+        <div className="w-full rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+          <h2 className="text-base font-black">Masuk dulu untuk lanjut</h2>
+          <p className="mt-1 text-xs text-white/60">
+            Pilih cara login. Ini bantu komunitas tetap aman dan ngebantu wawasan
+            kamu makin luas.
+          </p>
+
+          <div className="mt-5 space-y-3">
+            {/* GOOGLE — STANDARD */}
+            <button
+              onClick={signInGoogle}
+              disabled={loading === "google"}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10 disabled:opacity-60"
+            >
+              <div className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-white">
+                  <svg width="18" height="18" viewBox="0 0 48 48">
+                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.3 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
+                    <path fill="#FF3D00" d="M6.3 14.1l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.1z"/>
+                    <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.1-11.3-7.9l-6.6 5.1C9.6 39.6 16.2 44 24 44z"/>
+                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.6l6.3 5.2C41 35.8 44 30.4 44 24c0-1.3-.1-2.4-.4-3.5z"/>
+                  </svg>
+                </span>
+                <div>
+                  <div className="text-sm font-bold">Lanjut dengan Google</div>
+                  <div className="text-[11px] text-white/50">Layanan Standar • Bisa nonton trailer & episode</div>
+                </div>
+              </div>
+              <span
+                className="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-black"
+                style={{ background: NEON }}
+              >
+                Aktif
+              </span>
+            </button>
+
+            {/* X — PRO (gagal) */}
+            <button
+              onClick={() => setError({
+                kind: "x",
+                msg: "Maaf, kamu gak berhak masuk ke akun X karena anda tidak memenuhi syarat login email.",
+              })}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10"
+            >
+              <div className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-black text-white">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2H21.5l-7.5 8.57L22.5 22h-6.96l-5.45-7.13L3.7 22H.44l8.04-9.19L.5 2h7.13l4.92 6.51L18.244 2zm-2.44 18h1.93L7.27 4H5.23l10.575 16z"/>
+                  </svg>
+                </span>
+                <div>
+                  <div className="text-sm font-bold">Lanjut dengan X</div>
+                  <div className="text-[11px] text-white/50">Layanan Pro • Akses penuh</div>
+                </div>
+              </div>
+              <span className="rounded-full border border-white/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white/70">
+                Pro
+              </span>
+            </button>
+
+            {/* FACEBOOK — VIP (beta) */}
+            <button
+              onClick={() => setError({
+                kind: "fb",
+                msg: "Maaf, tidak bisa login kesini karena masih tahap awal.",
+              })}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10"
+            >
+              <div className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#1877F2] text-white">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/>
+                  </svg>
+                </span>
+                <div>
+                  <div className="text-sm font-bold">Lanjut dengan Facebook</div>
+                  <div className="text-[11px] text-white/50">Layanan VIP • Beta</div>
+                </div>
+              </div>
+              <span
+                className="rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest"
+                style={{ borderColor: "#FFD27A", color: "#FFD27A" }}
+              >
+                VIP
+              </span>
+            </button>
+          </div>
+
+          {error && (
+            <div
+              className="mt-4 rounded-lg border px-3 py-2 text-xs font-semibold"
+              style={
+                error.kind === "x"
+                  ? { borderColor: "#ff4d4d55", background: "#ff4d4d12", color: "#ff6b6b" }
+                  : { borderColor: "#FFD27A55", background: "#FFD27A12", color: "#FFD27A" }
+              }
+            >
+              {error.msg}
+            </div>
+          )}
+
+          <p className="mt-5 text-center text-[10px] text-white/30">
+            Dengan masuk kamu setuju ikut menjaga obrolan tetap sopan.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------- PROFILE EDITOR ----------------
+function ProfileSheet({
+  profile,
+  onClose,
+  onSaved,
+  onSignOut,
+}: {
+  profile: Profile;
+  onClose: () => void;
+  onSaved: (p: Profile) => void;
+  onSignOut: () => void;
+}) {
+  const [displayName, setDisplayName] = useState(profile.display_name ?? "");
+  const [username, setUsername] = useState(profile.username);
+  const [bio, setBio] = useState(profile.bio ?? "");
+  const [color, setColor] = useState(profile.avatar_color);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const save = async () => {
+    setErr(null);
+    setSaving(true);
+    const uname = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (uname.length < 3) {
+      setErr("Username minimal 3 karakter (huruf/angka/_).");
+      setSaving(false);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({
+        username: uname,
+        display_name: displayName.trim() || null,
+        bio: bio.trim() || null,
+        avatar_color: color,
+      })
+      .eq("id", profile.id)
+      .select("*")
+      .single();
+    setSaving(false);
+    if (error) {
+      setErr(error.message.includes("duplicate") ? "Username sudah dipakai." : error.message);
+      return;
+    }
+    onSaved(data as Profile);
+    onClose();
+  };
+
+  const palette = ["#39FF7A", "#7afcff", "#ffe66d", "#ff8fb1", "#c4a8ff", "#ffb86b", "#8affc1"];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center">
+      <div className="w-full max-w-md rounded-t-2xl border border-white/10 bg-[#0d0f0d] p-5 sm:rounded-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-sm font-black uppercase tracking-widest">Profil Kamu</h3>
+          <button onClick={onClose} className="text-white/60 hover:text-white">✕</button>
+        </div>
+
+        <div className="mb-4 flex items-center gap-3">
+          <div
+            className="grid h-14 w-14 place-items-center rounded-full text-xl font-black text-black"
+            style={{ background: color }}
+          >
+            {(displayName || username || "?").charAt(0).toUpperCase()}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {palette.map((c) => (
+              <button
+                key={c}
+                onClick={() => setColor(c)}
+                className={`h-6 w-6 rounded-full ring-2 ${c === color ? "ring-white" : "ring-transparent"}`}
+                style={{ background: c }}
+                aria-label={`Warna ${c}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <label className="block text-[10px] uppercase tracking-widest text-white/40">Nama tampilan</label>
+        <input
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          maxLength={40}
+          className="mt-1 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-[color:var(--n)]"
+          style={{ ["--n" as never]: NEON }}
+        />
+
+        <label className="mt-3 block text-[10px] uppercase tracking-widest text-white/40">Username</label>
+        <div className="mt-1 flex items-center rounded-lg border border-white/10 bg-black/40">
+          <span className="px-2 text-sm text-white/40">@</span>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            maxLength={24}
+            className="flex-1 bg-transparent py-2 pr-3 text-sm outline-none"
+          />
+        </div>
+
+        <label className="mt-3 block text-[10px] uppercase tracking-widest text-white/40">Bio</label>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          maxLength={160}
+          rows={3}
+          className="mt-1 w-full resize-none rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none"
+          placeholder="Ceritain sedikit tentang kamu..."
+        />
+        <div className="mt-1 text-right text-[10px] text-white/30">{bio.length}/160</div>
+
+        {err && <div className="mt-2 text-xs text-red-400">{err}</div>}
+
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <button
+            onClick={onSignOut}
+            className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/5"
+          >
+            Keluar
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="rounded-full px-5 py-2 text-xs font-black text-black disabled:opacity-60"
+            style={{ background: NEON }}
+          >
+            {saving ? "Menyimpan..." : "Simpan"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------- MAIN ----------------
 function Index() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthReady(true);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  if (!authReady) {
+    return <div className="grid min-h-screen place-items-center bg-[#070907] text-white/50 text-sm">Memuat...</div>;
+  }
+
+  if (!session) {
+    return <LoginGate onSignedIn={() => { /* state updates via listener */ }} />;
+  }
+
+  return <App session={session} />;
+}
+
+function App({ session }: { session: Session }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<BroadcastChannel | null>(null);
+  const userId = session.user.id;
 
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -93,136 +386,132 @@ function Index() {
   const [speed, setSpeed] = useState(1);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [me, setMe] = useState<{ name: string; color: string } | null>(null);
-  const [comments, setComments] = useState<UserComment[]>([]);
+  const [sending, setSending] = useState(false);
+
+  const [me, setMe] = useState<Profile | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [profilesMap, setProfilesMap] = useState<Record<string, Profile>>({});
+  const [showProfile, setShowProfile] = useState(false);
   const [, setTick] = useState(0);
 
   const current = EPISODES[idx];
 
-  // initialize identity + load chat history + realtime channel
+  // refresh time-ago labels
   useEffect(() => {
-    try {
-      const rawUser = localStorage.getItem(CHAT_USER_KEY);
-      if (rawUser) {
-        setMe(JSON.parse(rawUser));
-      } else {
-        const u = { name: randomNick(), color: randomColor() };
-        localStorage.setItem(CHAT_USER_KEY, JSON.stringify(u));
-        setMe(u);
-      }
-      const raw = localStorage.getItem(CHAT_STORAGE_KEY);
-      if (raw) setComments(JSON.parse(raw));
-    } catch {}
-
-    if (typeof BroadcastChannel !== "undefined") {
-      const ch = new BroadcastChannel("zone-hdd-chat");
-      channelRef.current = ch;
-      ch.onmessage = (e) => {
-        const msg = e.data as { type: string; payload: UserComment } | { type: "like"; id: string };
-        if (msg.type === "new" && "payload" in msg) {
-          setComments((cs) => (cs.some((c) => c.id === msg.payload.id) ? cs : [msg.payload, ...cs]));
-        } else if (msg.type === "like" && "id" in msg) {
-          setComments((cs) => cs.map((c) => (c.id === msg.id ? { ...c, likes: c.likes + 1 } : c)));
-        }
-      };
-    }
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === CHAT_STORAGE_KEY && e.newValue) {
-        try { setComments(JSON.parse(e.newValue)); } catch {}
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => {
-      channelRef.current?.close();
-      channelRef.current = null;
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
-  // persist chat
-  useEffect(() => {
-    try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(comments.slice(0, 200))); } catch {}
-  }, [comments]);
-
-  // refresh "time ago" labels every minute
-  useEffect(() => {
-    const id = window.setInterval(() => setTick((t) => t + 1), 60_000);
+    const id = window.setInterval(() => setTick((t) => t + 1), 30_000);
     return () => window.clearInterval(id);
   }, []);
 
+  // load me
   useEffect(() => {
-    setTime(0);
-    setPlaying(false);
-  }, [idx]);
+    (async () => {
+      const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+      if (data) setMe(data as Profile);
+    })();
+  }, [userId]);
 
-  useEffect(() => {
-    if (videoRef.current) videoRef.current.playbackRate = speed;
-  }, [speed]);
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.volume = volume;
-      videoRef.current.muted = muted;
+  const fetchProfiles = useCallback(async (ids: string[]) => {
+    const missing = ids.filter((id) => !profilesMap[id]);
+    if (missing.length === 0) return;
+    const { data } = await supabase.from("profiles").select("*").in("id", missing);
+    if (data && data.length) {
+      setProfilesMap((m) => {
+        const next = { ...m };
+        for (const p of data as Profile[]) next[p.id] = p;
+        return next;
+      });
     }
+  }, [profilesMap]);
+
+  // initial chat load
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (data) {
+        const list = data as ChatMessage[];
+        setMessages(list);
+        const ids = Array.from(new Set(list.map((m) => m.user_id)));
+        if (ids.length) {
+          const { data: profs } = await supabase.from("profiles").select("*").in("id", ids);
+          if (profs) {
+            const map: Record<string, Profile> = {};
+            for (const p of profs as Profile[]) map[p.id] = p;
+            setProfilesMap(map);
+          }
+        }
+      }
+    })();
+  }, []);
+
+  // realtime subscribe
+  useEffect(() => {
+    const ch = supabase
+      .channel("public-chat")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages" },
+        (payload) => {
+          const m = payload.new as ChatMessage;
+          setMessages((cs) => (cs.some((x) => x.id === m.id) ? cs : [m, ...cs].slice(0, 100)));
+          fetchProfiles([m.user_id]);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "chat_messages" },
+        (payload) => {
+          const oldId = (payload.old as { id: string }).id;
+          setMessages((cs) => cs.filter((x) => x.id !== oldId));
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [fetchProfiles]);
+
+  useEffect(() => { setTime(0); setPlaying(false); }, [idx]);
+  useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = speed; }, [speed]);
+  useEffect(() => {
+    if (videoRef.current) { videoRef.current.volume = volume; videoRef.current.muted = muted; }
   }, [volume, muted]);
 
-  const onTimeUpdate = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    setTime(v.currentTime);
-  };
-
   const togglePlay = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) v.play();
-    else v.pause();
+    const v = videoRef.current; if (!v) return;
+    if (v.paused) v.play(); else v.pause();
   };
-
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const v = videoRef.current;
-    if (!v || !dur) return;
+    const v = videoRef.current; if (!v || !dur) return;
     const r = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - r.left) / r.width;
-    v.currentTime = ratio * dur;
+    v.currentTime = ((e.clientX - r.left) / r.width) * dur;
   };
 
-  const sendComment = (e: React.FormEvent) => {
+  const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     const t = input.trim();
-    if (!t || !me) return;
-    const newC: UserComment = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      user: me.name,
-      avatarColor: me.color,
-      text: t,
-      time: Date.now(),
-      likes: 0,
-      liked: false,
-    };
-    setComments((c) => [newC, ...c]);
-    channelRef.current?.postMessage({ type: "new", payload: newC });
-    setInput("");
+    if (!t || sending) return;
+    setSending(true);
+    const { error } = await supabase
+      .from("chat_messages")
+      .insert({ user_id: userId, content: t });
+    setSending(false);
+    if (!error) setInput("");
   };
 
-  const toggleLike = (id: string) => {
-    setComments((cs) =>
-      cs.map((c) =>
-        c.id === id
-          ? { ...c, liked: !c.liked, likes: c.likes + (c.liked ? -1 : 1) }
-          : c,
-      ),
-    );
-    const target = comments.find((c) => c.id === id);
-    if (target && !target.liked) {
-      channelRef.current?.postMessage({ type: "like", id });
-    }
+  const deleteMessage = async (id: string) => {
+    await supabase.from("chat_messages").delete().eq("id", id);
+    setMessages((cs) => cs.filter((m) => m.id !== id));
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
   };
 
   const progress = dur ? (time / dur) * 100 : 0;
-
-
-
+  const meColor = me?.avatar_color ?? NEON;
+  const meInitial = (me?.display_name || me?.username || "?").charAt(0).toUpperCase();
 
   return (
     <div className="min-h-screen bg-[#0a0d0b] text-white">
@@ -231,61 +520,44 @@ function Index() {
         .range-neon { accent-color: ${NEON}; }
       `}</style>
 
-
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2 min-w-0">
-            <div
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-md font-black text-black"
-              style={{ background: NEON }}
-            >
-              Z
-            </div>
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md font-black text-black" style={{ background: NEON }}>Z</div>
             <div className="min-w-0">
               <h1 className="truncate text-sm font-black tracking-widest">ZONE</h1>
-              <p className="truncate text-[10px] uppercase tracking-[0.2em] text-white/40">
-                Heaven Defying Dragonforce
-              </p>
+              <p className="truncate text-[10px] uppercase tracking-[0.2em] text-white/40">Heaven Defying Dragonforce</p>
             </div>
           </div>
-          <span
-            className="rounded-full border px-2 py-1 text-[10px] uppercase tracking-widest"
-            style={{ borderColor: NEON, color: NEON }}
+          <button
+            onClick={() => setShowProfile(true)}
+            className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1 pl-1 pr-3 hover:bg-white/10"
           >
-            Season 1
-          </span>
+            <span
+              className="grid h-7 w-7 place-items-center rounded-full text-xs font-black text-black"
+              style={{ background: meColor }}
+            >
+              {meInitial}
+            </span>
+            <span className="text-xs font-bold">@{me?.username ?? "..."}</span>
+          </button>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-5 space-y-4">
-        {/* Hero Banner */}
+        {/* Hero */}
         <section className="relative overflow-hidden rounded-2xl border border-white/10">
           <div className="relative aspect-[3/4] sm:aspect-[16/9] w-full">
-            <img
-              src={poster.url}
-              alt="Heaven Defying Dragonforce poster"
-              className="absolute inset-0 h-full w-full object-cover"
-              loading="eager"
-            />
+            <img src={poster.url} alt="Heaven Defying Dragonforce poster" className="absolute inset-0 h-full w-full object-cover" loading="eager" />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/10" />
-            <div
-              className="pointer-events-none absolute -inset-px rounded-2xl"
-              style={{ boxShadow: `inset 0 0 60px ${NEON}22` }}
-            />
+            <div className="pointer-events-none absolute -inset-px rounded-2xl" style={{ boxShadow: `inset 0 0 60px ${NEON}22` }} />
             <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-black"
-                  style={{ background: NEON, boxShadow: `0 0 12px ${NEON}80` }}
-                >
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-black/70" />
-                  Tersedia • Sedang Tayang
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-black" style={{ background: NEON, boxShadow: `0 0 12px ${NEON}80` }}>
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-black/70" /> Tersedia • Sedang Tayang
                 </span>
-                <span
-                  className="inline-block rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-widest"
-                  style={{ borderColor: NEON, color: NEON }}
-                >
+                <span className="inline-block rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-widest" style={{ borderColor: NEON, color: NEON }}>
                   Eksklusif • Season 1
                 </span>
               </div>
@@ -293,9 +565,7 @@ function Index() {
                 Heaven Defying <span style={{ color: NEON }}>Dragonforce</span>
               </h2>
               <p className="max-w-lg text-xs sm:text-sm text-white/75 line-clamp-3">
-                Di tanah yang dikuasai kultivator kejam, Lei Zhen bangkit dengan
-                kekuatan Naga Awal untuk melawan takdir. Petualangan epik penuh
-                pertarungan dahsyat dan rahasia kuno menanti.
+                Di tanah yang dikuasai kultivator kejam, Lei Zhen bangkit dengan kekuatan Naga Awal untuk melawan takdir. Petualangan epik penuh pertarungan dahsyat dan rahasia kuno menanti.
               </p>
               <button
                 onClick={() => {
@@ -305,9 +575,7 @@ function Index() {
                 className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-black text-black transition hover:brightness-110"
                 style={{ background: NEON, boxShadow: `0 0 24px ${NEON}80` }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                 Tonton Sekarang
               </button>
             </div>
@@ -324,104 +592,47 @@ function Index() {
               onClick={togglePlay}
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
-              onTimeUpdate={onTimeUpdate}
+              onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
               onLoadedMetadata={(e) => setDur(e.currentTarget.duration)}
               playsInline
             />
-
             {!playing && (
-              <button
-                onClick={togglePlay}
-                className="absolute inset-0 grid place-items-center bg-black/30 transition hover:bg-black/40"
-                aria-label="Play"
-              >
-                <span
-                  className="grid h-16 w-16 place-items-center rounded-full text-black"
-                  style={{ background: NEON, boxShadow: `0 0 30px ${NEON}80` }}
-                >
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+              <button onClick={togglePlay} className="absolute inset-0 grid place-items-center bg-black/30 transition hover:bg-black/40" aria-label="Play">
+                <span className="grid h-16 w-16 place-items-center rounded-full text-black" style={{ background: NEON, boxShadow: `0 0 30px ${NEON}80` }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                 </span>
               </button>
             )}
           </div>
 
-          {/* Controls */}
           <div className="bg-gradient-to-t from-black to-black/70 px-3 pb-3 pt-2">
-            <div
-              onClick={seek}
-              className="group relative h-2 cursor-pointer rounded-full bg-white/10"
-            >
-              <div
-                className="absolute inset-y-0 left-0 rounded-full transition-[width]"
-                style={{ width: `${progress}%`, background: NEON, boxShadow: `0 0 8px ${NEON}` }}
-              />
+            <div onClick={seek} className="group relative h-2 cursor-pointer rounded-full bg-white/10">
+              <div className="absolute inset-y-0 left-0 rounded-full transition-[width]" style={{ width: `${progress}%`, background: NEON, boxShadow: `0 0 8px ${NEON}` }} />
             </div>
-
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <button
-                onClick={togglePlay}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white/10 hover:bg-white/20"
-                aria-label={playing ? "Pause" : "Play"}
-              >
+              <button onClick={togglePlay} className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white/10 hover:bg-white/20" aria-label={playing ? "Pause" : "Play"}>
                 {playing ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-                  </svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
                 ) : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                 )}
               </button>
-
-              <span className="tabular-nums text-white/70">
-                {fmt(time)} <span className="text-white/30">/</span> {fmt(dur)}
-              </span>
-
+              <span className="tabular-nums text-white/70">{fmt(time)} <span className="text-white/30">/</span> {fmt(dur)}</span>
               <div className="ml-auto flex items-center gap-2">
-                <button
-                  onClick={() => setMuted((m) => !m)}
-                  className="grid h-8 w-8 place-items-center rounded-md bg-white/10 hover:bg-white/20"
-                  aria-label="Mute"
-                >
+                <button onClick={() => setMuted((m) => !m)} className="grid h-8 w-8 place-items-center rounded-md bg-white/10 hover:bg-white/20" aria-label="Mute">
                   {muted || volume === 0 ? "🔇" : volume < 0.5 ? "🔈" : "🔊"}
                 </button>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={muted ? 0 : volume}
-                  onChange={(e) => {
-                    setVolume(Number(e.target.value));
-                    setMuted(false);
-                  }}
-                  className="range-neon hidden w-20 sm:block"
-                />
-
+                <input type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume}
+                  onChange={(e) => { setVolume(Number(e.target.value)); setMuted(false); }}
+                  className="range-neon hidden w-20 sm:block" />
                 <div className="relative">
-                  <button
-                    onClick={() => setSpeedOpen((o) => !o)}
-                    className="rounded-md bg-white/10 px-2 py-1.5 text-xs font-semibold hover:bg-white/20"
-                  >
-                    {speed}x
-                  </button>
+                  <button onClick={() => setSpeedOpen((o) => !o)} className="rounded-md bg-white/10 px-2 py-1.5 text-xs font-semibold hover:bg-white/20">{speed}x</button>
                   {speedOpen && (
                     <div className="absolute bottom-full right-0 mb-2 w-24 overflow-hidden rounded-md border border-white/10 bg-black/95 shadow-lg">
                       {SPEEDS.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => {
-                            setSpeed(s);
-                            setSpeedOpen(false);
-                          }}
-                          className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-white/10 ${
-                            s === speed ? "font-bold" : ""
-                          }`}
-                          style={s === speed ? { color: NEON } : undefined}
-                        >
+                        <button key={s} onClick={() => { setSpeed(s); setSpeedOpen(false); }}
+                          className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-white/10 ${s === speed ? "font-bold" : ""}`}
+                          style={s === speed ? { color: NEON } : undefined}>
                           {s === 1 ? "1.0x (Normal)" : `${s}x`}
                         </button>
                       ))}
@@ -433,119 +644,86 @@ function Index() {
           </div>
         </div>
 
-        {/* Active episode title */}
         <div>
-          <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">
-            Sedang Tayang
-          </p>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Sedang Tayang</p>
           <h2 className="mt-1 text-lg font-black sm:text-xl">
             Episode {current.num} — <span style={{ color: NEON }}>{current.title}</span>
           </h2>
         </div>
 
-        {/* Comments section */}
+        {/* Public Realtime Chat */}
         <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black uppercase tracking-widest">Live Chat</h3>
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">
-                {comments.length}
-              </span>
+              <h3 className="text-sm font-black uppercase tracking-widest">Obrolan Publik</h3>
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/70">{messages.length}</span>
               <span className="flex items-center gap-1 text-[10px] text-white/50">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: NEON }} />
                 Realtime
               </span>
             </div>
-            {me && (
-              <span className="text-[10px] text-white/40">
-                kamu: <span style={{ color: me.color }}>@{me.name}</span>
-              </span>
-            )}
           </div>
 
-          <form onSubmit={sendComment} className="mb-4 flex items-start gap-2">
-            <div
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black"
-              style={{ background: me?.color ?? NEON }}
-            >
-              {(me?.name ?? "K").charAt(0).toUpperCase()}
+          <form onSubmit={sendMessage} className="mb-4 flex items-start gap-2">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black" style={{ background: meColor }}>
+              {meInitial}
             </div>
             <div className="min-w-0 flex-1">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ajak ngobrol publik tentang episode ini..."
+                placeholder="Ajak ngobrol semua orang..."
                 className="w-full border-b border-white/10 bg-transparent px-1 py-2 text-sm placeholder:text-white/30 focus:border-[color:var(--neon)] focus:outline-none"
                 style={{ ["--neon" as never]: NEON }}
-                maxLength={300}
+                maxLength={500}
               />
               {input.trim() && (
                 <div className="mt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setInput("")}
-                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-full px-4 py-1.5 text-xs font-bold text-black transition hover:brightness-110"
-                    style={{ background: NEON }}
-                  >
-                    Kirim
+                  <button type="button" onClick={() => setInput("")} className="rounded-full px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10">Batal</button>
+                  <button type="submit" disabled={sending} className="rounded-full px-4 py-1.5 text-xs font-bold text-black transition hover:brightness-110 disabled:opacity-60" style={{ background: NEON }}>
+                    {sending ? "Mengirim..." : "Kirim"}
                   </button>
                 </div>
               )}
             </div>
           </form>
 
-          {comments.length === 0 ? (
-            <p className="text-xs text-white/30">Belum ada komentar. Jadilah yang pertama!</p>
+          {messages.length === 0 ? (
+            <p className="text-xs text-white/30">Belum ada pesan. Jadilah yang pertama!</p>
           ) : (
             <ul className="space-y-4">
-              {comments.map((c) => (
-                <li key={c.id} className="flex items-start gap-2">
-                  <div
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black"
-                    style={{ background: c.avatarColor }}
-                  >
-                    {c.user.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-xs font-bold text-white/90">@{c.user}</span>
-                      <span className="text-[10px] text-white/40">{timeAgo(c.time)}</span>
+              {messages.map((m) => {
+                const p = profilesMap[m.user_id];
+                const color = p?.avatar_color ?? "#888";
+                const name = p?.display_name || p?.username || "User";
+                const uname = p?.username ?? "user";
+                const isMine = m.user_id === userId;
+                return (
+                  <li key={m.id} className="flex items-start gap-2">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black" style={{ background: color }}>
+                      {name.charAt(0).toUpperCase()}
                     </div>
-                    <p className="mt-0.5 break-words text-sm text-white/85">{c.text}</p>
-                    <div className="mt-1 flex items-center gap-3">
-                      <button
-                        onClick={() => toggleLike(c.id)}
-                        className="flex items-center gap-1 text-xs text-white/60 hover:text-white"
-                      >
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill={c.liked ? NEON : "none"}
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M7 22V11M2 13v7a2 2 0 0 0 2 2h3V11H4a2 2 0 0 0-2 2zm5-2 4-9a3 3 0 0 1 3 3v3h4a2 2 0 0 1 2 2l-1.5 7a2 2 0 0 1-2 1.5H7" />
-                        </svg>
-                        <span style={c.liked ? { color: NEON } : undefined}>{c.likes}</span>
-                      </button>
-                      <button className="text-xs text-white/50 hover:text-white">Balas</button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xs font-bold text-white/90">{name}</span>
+                        <span className="text-[10px] text-white/40">@{uname} • {timeAgo(m.created_at)}</span>
+                      </div>
+                      {p?.bio && <p className="text-[10px] italic text-white/40 line-clamp-1">{p.bio}</p>}
+                      <p className="mt-0.5 break-words text-sm text-white/85">{m.content}</p>
+                      {isMine && (
+                        <button onClick={() => deleteMessage(m.id)} className="mt-1 text-[10px] text-white/40 hover:text-red-400">
+                          Hapus
+                        </button>
+                      )}
                     </div>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
 
-
-        {/* Episode number grid */}
+        {/* Episode grid */}
         <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-black uppercase tracking-widest">Daftar Episode</h3>
@@ -555,83 +733,25 @@ function Index() {
             {EPISODES.map((e, i) => {
               const active = i === idx;
               return (
-                <button
-                  key={e.num}
-                  onClick={() => setIdx(i)}
-                  className={`aspect-square rounded-md border text-sm font-bold transition ${
-                    active
-                      ? "text-black"
-                      : "border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
-                  }`}
-                  style={
-                    active
-                      ? { background: NEON, borderColor: NEON, boxShadow: `0 0 12px ${NEON}80` }
-                      : undefined
-                  }
-                >
+                <button key={e.num} onClick={() => setIdx(i)}
+                  className={`aspect-square rounded-md border text-sm font-bold transition ${active ? "text-black" : "border-white/10 bg-white/5 text-white/80 hover:bg-white/10"}`}
+                  style={active ? { background: NEON, borderColor: NEON, boxShadow: `0 0 12px ${NEON}80` } : undefined}>
                   {e.num}
                 </button>
               );
             })}
           </div>
         </div>
-
-        {/* Coming Soon — Adit & Sopo Jarwo */}
-        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-black uppercase tracking-widest">Akan Datang</h3>
-            <span
-              className="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
-              style={{ borderColor: NEON, color: NEON }}
-            >
-              Coming Soon
-            </span>
-          </div>
-
-          <div className="flex gap-3">
-            <div className="relative aspect-[3/4] w-28 shrink-0 overflow-hidden rounded-lg border border-white/10">
-              <img
-                src={aditPoster.url}
-                alt="Adit & Sopo Jarwo poster"
-                className="absolute inset-0 h-full w-full object-cover"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <span
-                className="absolute left-1 top-1 rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-black"
-                style={{ background: NEON }}
-              >
-                Soon
-              </span>
-              <span className="absolute inset-x-0 bottom-1 text-center text-[10px] font-black uppercase tracking-widest text-white drop-shadow">
-                Coming Soon
-              </span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="text-base font-black leading-tight">
-                Adit & Sopo <span style={{ color: NEON }}>Jarwo</span>
-              </h4>
-              <p className="mt-1 text-[11px] text-white/60">
-                Petualangan seru Adit, Dennis, dan kawan-kawan di kampung. Episode 1–6 segera hadir.
-              </p>
-              <div className="mt-3 grid grid-cols-3 gap-1.5">
-                {COMING_SOON.map((e) => (
-                  <div
-                    key={e.num}
-                    className="rounded-md border border-dashed border-white/15 bg-black/40 px-2 py-1.5 text-[10px] text-white/60"
-                  >
-                    <div className="font-bold text-white/80">Ep {e.num}</div>
-                    <div className="truncate">{e.title}</div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-[10px] uppercase tracking-widest text-white/30">
-                Belum tersedia • Coming Soon
-              </p>
-            </div>
-          </div>
-        </section>
       </main>
+
+      {showProfile && me && (
+        <ProfileSheet
+          profile={me}
+          onClose={() => setShowProfile(false)}
+          onSaved={(p) => { setMe(p); setProfilesMap((m) => ({ ...m, [p.id]: p })); }}
+          onSignOut={signOut}
+        />
+      )}
     </div>
   );
 }
