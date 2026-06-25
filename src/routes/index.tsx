@@ -595,6 +595,20 @@ function App({ session }: { session: Session }) {
   const [profilesMap, setProfilesMap] = useState<Record<string, Profile>>({});
   const [showProfile, setShowProfile] = useState(false);
   const [, setTick] = useState(0);
+  const [tier, setTier] = useState<Tier>("standard");
+  const [alias, setAlias] = useState<string>("");
+  const [showWelcome, setShowWelcome] = useState(true);
+
+  useEffect(() => {
+    try {
+      const t = (localStorage.getItem(TIER_KEY) as Tier | null) ?? "standard";
+      const a = localStorage.getItem(ALIAS_KEY) ?? "";
+      setTier(t);
+      setAlias(a);
+    } catch { /* ignore */ }
+    const id = window.setTimeout(() => setShowWelcome(false), 5000);
+    return () => window.clearTimeout(id);
+  }, []);
 
   const current = EPISODES[idx];
 
