@@ -6,6 +6,7 @@ import ep3 from "@/assets/ep3.mp4.asset.json";
 import ep4 from "@/assets/ep4.mp4.asset.json";
 import ep5 from "@/assets/ep5.mp4.asset.json";
 import poster from "@/assets/hdd-poster.asset.json";
+import aditPoster from "@/assets/adit-sopo-jarwo.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import type { Session } from "@supabase/supabase-js";
@@ -772,6 +773,57 @@ function App({ session }: { session: Session }) {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-5 space-y-4 animate-fade-in">
+        {/* Menu Utama — Katalog */}
+        <section>
+          <div className="mb-2 flex items-end justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Menu Utama</p>
+              <h2 className="text-lg font-black sm:text-xl">Katalog Serial</h2>
+            </div>
+            <span className="text-[10px] uppercase tracking-widest text-white/40">2 Judul</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {/* HDD — bisa ditonton */}
+            <button
+              onClick={() => playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="group relative overflow-hidden rounded-xl border border-white/10 bg-black text-left transition hover:border-[color:var(--n)]"
+              style={{ ["--n" as never]: NEON }}
+            >
+              <div className="relative aspect-[3/4] w-full">
+                <img src={poster.url} alt="Heaven Defying Dragonforce" className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-black" style={{ background: NEON }}>
+                  <span className="h-1 w-1 animate-pulse rounded-full bg-black/70" /> Bisa Ditonton
+                </span>
+              </div>
+              <div className="p-2.5">
+                <p className="truncate text-xs font-black">Heaven Defying Dragonforce</p>
+                <p className="mt-0.5 text-[10px] text-white/50">Season 1 • 5 Episode</p>
+              </div>
+            </button>
+
+            {/* Adit & Sopo Jarwo — coming soon */}
+            <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black text-left">
+              <div className="relative aspect-[3/4] w-full">
+                <img src={aditPoster.url} alt="Adit & Sopo Jarwo" className="absolute inset-0 h-full w-full object-cover opacity-70" loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30" />
+                <span className="absolute left-2 top-2 rounded-full border border-white/30 bg-black/60 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white/90">
+                  Coming Soon
+                </span>
+                <div className="absolute inset-0 grid place-items-center">
+                  <div className="rounded-full border border-white/30 bg-black/60 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/90 backdrop-blur">
+                    🔒 Segera
+                  </div>
+                </div>
+              </div>
+              <div className="p-2.5">
+                <p className="truncate text-xs font-black">Adit & Sopo Jarwo</p>
+                <p className="mt-0.5 text-[10px] text-white/50">Season 1 • Eps 1–6</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Hero */}
         <section className="relative overflow-hidden rounded-2xl border border-white/10">
           <div className="relative aspect-[3/4] sm:aspect-[16/9] w-full">
