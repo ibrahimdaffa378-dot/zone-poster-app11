@@ -756,12 +756,21 @@ function App({ session }: { session: Session }) {
             >
               {meInitial}
             </span>
-            <span className="text-xs font-bold">@{me?.username ?? "..."}</span>
+            <span className="text-xs font-bold">@{alias || me?.username || "..."}</span>
+            <TierBadges tier={tier} />
           </button>
         </div>
+        {showWelcome && (
+          <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 pb-2 text-[11px] text-white/70 animate-fade-in">
+            <span>Welcome back,</span>
+            <span className="font-bold text-white">{alias || me?.username || "kamu"}</span>
+            <TierBadges tier={tier} />
+            <button onClick={() => setShowWelcome(false)} className="ml-auto text-white/40 hover:text-white">✕</button>
+          </div>
+        )}
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-5 space-y-4">
+      <main className="mx-auto max-w-3xl px-4 py-5 space-y-4 animate-fade-in">
         {/* Hero */}
         <section className="relative overflow-hidden rounded-2xl border border-white/10">
           <div className="relative aspect-[3/4] sm:aspect-[16/9] w-full">
