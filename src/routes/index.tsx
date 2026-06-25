@@ -65,19 +65,212 @@ function fmt(s: number) {
 }
 
 // ---------------- LOGIN GATE ----------------
-function LoginGate({ onSignedIn }: { onSignedIn: () => void }) {
-  const [error, setError] = useState<{ kind: "x" | "fb"; msg: string } | null>(null);
-  const [loading, setLoading] = useState<null | "google">(null);
+const TIER_KEY = "zone_tier";
+const ALIAS_KEY = "zone_alias";
 
-  const signInGoogle = async () => {
-    setError(null);
+type Tier = "dev" | "standard" | "pro";
+
+const QUIZ: { q: string; opts: string[]; a: number }[] = [
+  { q: "Siapa rival Lei Zhen yang akhirnya menjadi teman baiknya?", opts: ["Xhuan Xen", "Xhunanye", "Hong Shou"], a: 0 },
+  { q: "Siapa ayah Lei Zhen?", opts: ["Lei Wuji", "Lei Tian", "Lei Kun"], a: 1 },
+  { q: "Kenapa Tai Chu memilih Lei Zhen sebagai murid?", opts: ["Karena keluarganya kaya", "Karena sudah dewa", "Karena darah Naga Awal mengalir di tubuhnya"], a: 2 },
+  { q: "Apa kekuatan inti Lei Zhen?", opts: ["Naga Awal", "Api Phoenix", "Es Abadi"], a: 0 },
+  { q: "Bagaimana kondisi kultivasi Lei Zhen di awal cerita?", opts: ["Sudah master", "Ditekan / dianggap lemah", "Sudah jadi dewa"], a: 1 },
+  { q: "Siapa guru spiritual utama Lei Zhen?", opts: ["Hong Shou", "Xhuan Xen", "Tai Chu"], a: 2 },
+  { q: "Apa wujud transformasi khas Lei Zhen?", opts: ["Wujud Harimau Putih", "Wujud Naga", "Wujud Burung Phoenix"], a: 1 },
+  { q: "Salah satu musuh besar di awal kebangkitan Lei Zhen berasal dari klan?", opts: ["Klan Hong", "Klan Lei", "Klan Tai"], a: 0 },
+  { q: "Tema utama Heaven Defying Dragonforce?", opts: ["Komedi sekolah", "Melawan takdir & langit", "Roman kerajaan"], a: 1 },
+  { q: "Apa yang Lei Zhen kejar di sepanjang perjalanannya?", opts: ["Harta karun dunia", "Kekuatan untuk balas dendam & melindungi", "Jabatan kaisar"], a: 1 },
+];
+
+function QuizModal({ onPass, onClose }: { onPass: () => void; onClose: () => void }) {
+  const [answers, setAnswers] = useState<number[]>(Array(QUIZ.length).fill(-1));
+  const [result, setResult] = useState<null | { ok: boolean; wrong: number[] }>(null);
+
+  const submit = () => {
+    const wrong: number[] = [];
+    QUIZ.forEach((q, i) => { if (answers[i] !== q.a) wrong.push(i); });
+    setResult({ ok: wrong.length === 0, wrong });
+    if (wrong.length === 0) setTimeout(onPass, 700);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl border border-white/10 bg-[#0d0f0d] p-5 sm:rounded-2xl animate-fade-in">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-black uppercase tracking-widest">Kuis Verifikasi • HDD</h3>
+          <button onClick={onClose} className="text-white/60 hover:text-white">✕</button>
+        </div>
+        <p className="text-xs text-white/60">
+          10 pertanyaan seputar <span style={{ color: NEON }}>Heaven Defying Dragonforce</span>. Semua harus benar untuk lanjut.
+        </p>
+
+        <ol className="mt-4 space-y-4">
+          {QUIZ.map((q, i) => (
+            <li key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+              <div className="text-xs font-bold text-white/90">{i + 1}. {q.q}</div>
+              <div className="mt-2 space-y-1.5">
+                {q.opts.map((opt, oi) => {
+                  const picked = answers[i] === oi;
+                  const isWrong = result && !result.ok && result.wrong.includes(i) && picked;
+                  return (
+                    <label
+                      key={oi}
+                      className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition ${picked ? "bg-white/10" : "hover:bg-white/5"}`}
+                      style={{ borderColor: isWrong ? "#ff6b6b" : picked ? NEON : "rgba(255,255,255,0.08)" }}
+                    >
+                      <input
+                        type="radio"
+                        name={`q-${i}`}
+                        checked={picked}
+                        onChange={() => {
+                          const next = [...answers];
+                          next[i] = oi;
+                          setAnswers(next);
+                          setResult(null);
+                        }}
+                        style={{ accentColor: NEON }}
+                      />
+                      <span>{String.fromCharCode(65 + oi)}. {opt}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        {result && !result.ok && (
+          <div className="mt-3 rounded-lg border px-3 py-2 text-xs font-semibold"
+            style={{ borderColor: "#ff4d4d55", background: "#ff4d4d12", color: "#ff6b6b" }}>
+            Ada {result.wrong.length} jawaban salah. Perbaiki dulu — semua harus benar.
+          </div>
+        )}
+        {result && result.ok && (
+          <div className="mt-3 rounded-lg border px-3 py-2 text-xs font-semibold"
+            style={{ borderColor: `${NEON}55`, background: `${NEON}15`, color: NEON }}>
+            Semua benar! Mengarahkan kamu masuk...
+          </div>
+        )}
+
+        <button
+          onClick={submit}
+          disabled={answers.includes(-1)}
+          className="mt-4 w-full rounded-full px-5 py-2.5 text-sm font-black text-black transition hover:brightness-110 disabled:opacity-50"
+          style={{ background: NEON, boxShadow: `0 0 24px ${NEON}80` }}
+        >
+          Submit Jawaban
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CaptchaModal({ onPass, onClose }: { onPass: () => void; onClose: () => void }) {
+  const [checked, setChecked] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  const onCheck = () => {
+    if (checked || verifying) return;
+    setVerifying(true);
+    setTimeout(() => {
+      setChecked(true);
+      setVerifying(false);
+      setTimeout(onPass, 600);
+    }, 1100);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/80 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0d0f0d] p-5 animate-scale-in">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: "#FFD27A" }}>Verifikasi VIP</h3>
+          <button onClick={onClose} className="text-white/60 hover:text-white">✕</button>
+        </div>
+        <p className="text-xs text-white/60">Apakah anda robot atau bukan?</p>
+
+        <div className="mt-4 rounded-xl border border-white/15 bg-white/[0.03] p-4">
+          <label className="flex cursor-pointer items-center gap-3" onClick={onCheck}>
+            <span className="relative grid h-7 w-7 place-items-center rounded border-2 border-white/30 bg-black">
+              {verifying && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-transparent" />}
+              {checked && (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#39FF7A" strokeWidth="3">
+                  <path d="M5 12l5 5L20 7" />
+                </svg>
+              )}
+            </span>
+            <span className="text-sm font-semibold">Saya bukan robot</span>
+          </label>
+          <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-white/40">
+            <span>reCAPTCHA</span>
+            <span>Privasi · Syarat</span>
+          </div>
+        </div>
+
+        {checked && (
+          <div className="mt-3 rounded-lg border px-3 py-2 text-xs font-semibold"
+            style={{ borderColor: "#FFD27A55", background: "#FFD27A12", color: "#FFD27A" }}>
+            Verifikasi berhasil. Membuka Akun PRO...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DevNameModal({ onSubmit, onClose }: { onSubmit: (name: string) => void; onClose: () => void }) {
+  const [name, setName] = useState("");
+  return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/80 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0d0f0d] p-5 animate-scale-in">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-black uppercase tracking-widest">Masuk dengan Google</h3>
+          <button onClick={onClose} className="text-white/60 hover:text-white">✕</button>
+        </div>
+        <p className="text-xs text-white/60">Masukkan username kamu untuk melanjutkan.</p>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="username"
+          className="mt-3 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-[color:var(--n)]"
+          style={{ ["--n" as never]: NEON }}
+          onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) onSubmit(name.trim()); }}
+        />
+        <button
+          onClick={() => name.trim() && onSubmit(name.trim())}
+          disabled={!name.trim()}
+          className="mt-4 w-full rounded-full px-5 py-2.5 text-sm font-black text-black transition hover:brightness-110 disabled:opacity-50"
+          style={{ background: NEON }}
+        >
+          Lanjut
+        </button>
+        <p className="mt-3 text-center text-[10px] text-white/30">Developer? Pakai username asli kamu.</p>
+      </div>
+    </div>
+  );
+}
+
+function LoginGate({ onSignedIn }: { onSignedIn: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<null | "google" | "x" | "fb">(null);
+  const [showDevName, setShowDevName] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [showCaptcha, setShowCaptcha] = useState(false);
+  const [pendingAlias, setPendingAlias] = useState<string>("");
+
+  const startOAuth = async (tier: Tier, alias: string) => {
+    try {
+      localStorage.setItem(TIER_KEY, tier);
+      localStorage.setItem(ALIAS_KEY, alias);
+    } catch { /* ignore */ }
     setLoading("google");
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
       });
       if (result.error) {
-        setError({ kind: "x", msg: "Gagal masuk dengan Google. Coba lagi." });
+        setError("Gagal masuk. Coba lagi.");
         setLoading(null);
         return;
       }
@@ -87,36 +280,38 @@ function LoginGate({ onSignedIn }: { onSignedIn: () => void }) {
     }
   };
 
+  const clickGoogle = () => { setError(null); setShowDevName(true); };
+  const handleDevName = (name: string) => {
+    setShowDevName(false);
+    setPendingAlias(name);
+    if (name === "Sion_dfkit") startOAuth("dev", "Sion_dfkit");
+    else setShowQuiz(true);
+  };
+  const clickX = async () => {
+    setError(null);
+    setLoading("x");
+    await new Promise((r) => setTimeout(r, 1400));
+    await startOAuth("standard", "user");
+  };
+  const clickFb = () => { setError(null); setShowCaptcha(true); };
+
   return (
-    <div className="min-h-screen bg-[#070907] text-white">
+    <div className="min-h-screen bg-[#070907] text-white animate-fade-in">
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-5 py-10">
         <div className="mb-6 flex flex-col items-center">
-          <div
-            className="grid h-14 w-14 place-items-center rounded-2xl text-2xl font-black text-black"
-            style={{ background: NEON, boxShadow: `0 0 36px ${NEON}80` }}
-          >
-            Z
-          </div>
+          <div className="grid h-14 w-14 place-items-center rounded-2xl text-2xl font-black text-black"
+            style={{ background: NEON, boxShadow: `0 0 36px ${NEON}80` }}>Z</div>
           <h1 className="mt-4 text-2xl font-black tracking-widest">ZONE</h1>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-white/40">
-            Heaven Defying Dragonforce
-          </p>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-white/40">Heaven Defying Dragonforce</p>
         </div>
 
         <div className="w-full rounded-2xl border border-white/10 bg-white/[0.02] p-5">
           <h2 className="text-base font-black">Masuk dulu untuk lanjut</h2>
-          <p className="mt-1 text-xs text-white/60">
-            Pilih cara login. Ini bantu komunitas tetap aman dan ngebantu wawasan
-            kamu makin luas.
-          </p>
+          <p className="mt-1 text-xs text-white/60">Pilih cara login. Ini bantu komunitas tetap aman dan ngebantu wawasan kamu makin luas.</p>
 
           <div className="mt-5 space-y-3">
-            {/* GOOGLE — STANDARD */}
-            <button
-              onClick={signInGoogle}
-              disabled={loading === "google"}
-              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10 disabled:opacity-60"
-            >
+            <button onClick={clickGoogle} disabled={loading !== null}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10 disabled:opacity-60">
               <div className="flex items-center gap-3">
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-white">
                   <svg width="18" height="18" viewBox="0 0 48 48">
@@ -131,46 +326,32 @@ function LoginGate({ onSignedIn }: { onSignedIn: () => void }) {
                   <div className="text-[11px] text-white/50">Layanan Standar • Bisa nonton trailer & episode</div>
                 </div>
               </div>
-              <span
-                className="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-black"
-                style={{ background: NEON }}
-              >
-                Aktif
-              </span>
+              <span className="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-black"
+                style={{ background: NEON }}>Aktif</span>
             </button>
 
-            {/* X — PRO (gagal) */}
-            <button
-              onClick={() => setError({
-                kind: "x",
-                msg: "Maaf, kamu gak berhak masuk ke akun X karena anda tidak memenuhi syarat login email.",
-              })}
-              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10"
-            >
+            <button onClick={clickX} disabled={loading !== null}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10 disabled:opacity-60">
               <div className="flex items-center gap-3">
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-black text-white">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.244 2H21.5l-7.5 8.57L22.5 22h-6.96l-5.45-7.13L3.7 22H.44l8.04-9.19L.5 2h7.13l4.92 6.51L18.244 2zm-2.44 18h1.93L7.27 4H5.23l10.575 16z"/>
-                  </svg>
+                  {loading === "x" ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.244 2H21.5l-7.5 8.57L22.5 22h-6.96l-5.45-7.13L3.7 22H.44l8.04-9.19L.5 2h7.13l4.92 6.51L18.244 2zm-2.44 18h1.93L7.27 4H5.23l10.575 16z"/>
+                    </svg>
+                  )}
                 </span>
                 <div>
                   <div className="text-sm font-bold">Lanjut dengan X</div>
-                  <div className="text-[11px] text-white/50">Layanan Pro • Akses penuh</div>
+                  <div className="text-[11px] text-white/50">{loading === "x" ? "Memproses..." : "Layanan Pro • Akses penuh"}</div>
                 </div>
               </div>
-              <span className="rounded-full border border-white/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white/70">
-                Pro
-              </span>
+              <span className="rounded-full border border-white/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white/70">Pro</span>
             </button>
 
-            {/* FACEBOOK — VIP (beta) */}
-            <button
-              onClick={() => setError({
-                kind: "fb",
-                msg: "Maaf, tidak bisa login kesini karena masih tahap awal.",
-              })}
-              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10"
-            >
+            <button onClick={clickFb} disabled={loading !== null}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10 disabled:opacity-60">
               <div className="flex items-center gap-3">
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#1877F2] text-white">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -182,35 +363,56 @@ function LoginGate({ onSignedIn }: { onSignedIn: () => void }) {
                   <div className="text-[11px] text-white/50">Layanan VIP • Beta</div>
                 </div>
               </div>
-              <span
-                className="rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest"
-                style={{ borderColor: "#FFD27A", color: "#FFD27A" }}
-              >
-                VIP
-              </span>
+              <span className="rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest"
+                style={{ borderColor: "#FFD27A", color: "#FFD27A" }}>VIP</span>
             </button>
           </div>
 
           {error && (
-            <div
-              className="mt-4 rounded-lg border px-3 py-2 text-xs font-semibold"
-              style={
-                error.kind === "x"
-                  ? { borderColor: "#ff4d4d55", background: "#ff4d4d12", color: "#ff6b6b" }
-                  : { borderColor: "#FFD27A55", background: "#FFD27A12", color: "#FFD27A" }
-              }
-            >
-              {error.msg}
-            </div>
+            <div className="mt-4 rounded-lg border px-3 py-2 text-xs font-semibold"
+              style={{ borderColor: "#ff4d4d55", background: "#ff4d4d12", color: "#ff6b6b" }}>{error}</div>
           )}
 
-          <p className="mt-5 text-center text-[10px] text-white/30">
-            Dengan masuk kamu setuju ikut menjaga obrolan tetap sopan.
-          </p>
+          <p className="mt-5 text-center text-[10px] text-white/30">Dengan masuk kamu setuju ikut menjaga obrolan tetap sopan.</p>
         </div>
       </div>
+
+      {showDevName && <DevNameModal onClose={() => setShowDevName(false)} onSubmit={handleDevName} />}
+      {showQuiz && (
+        <QuizModal onClose={() => setShowQuiz(false)}
+          onPass={() => { setShowQuiz(false); startOAuth("standard", pendingAlias || "user"); }} />
+      )}
+      {showCaptcha && (
+        <CaptchaModal onClose={() => setShowCaptcha(false)}
+          onPass={() => { setShowCaptcha(false); startOAuth("pro", "vip_member"); }} />
+      )}
     </div>
   );
+}
+
+// ---------------- BADGES ----------------
+function TierBadges({ tier }: { tier: Tier }) {
+  if (tier === "dev") {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <span title="Verified Developer" className="grid h-4 w-4 place-items-center rounded-full text-black" style={{ background: NEON }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M5 12l5 5L20 7" /></svg>
+        </span>
+        <span title="Verified Staff" className="grid h-4 w-4 place-items-center rounded-full text-white" style={{ background: "#a855f7" }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M5 12l5 5L20 7" /></svg>
+        </span>
+      </span>
+    );
+  }
+  if (tier === "pro") {
+    return (
+      <span className="rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-black"
+        style={{ background: "linear-gradient(135deg,#FFE27A,#FFB347,#FFD27A)", boxShadow: "0 0 10px rgba(255,210,122,0.55)" }}>
+        PRO
+      </span>
+    );
+  }
+  return null;
 }
 
 // ---------------- PROFILE EDITOR ----------------
