@@ -722,6 +722,7 @@ function App({ session }: { session: Session }) {
   };
 
   const signOut = async () => {
+    try { localStorage.removeItem(TIER_KEY); localStorage.removeItem(ALIAS_KEY); } catch { /* ignore */ }
     await supabase.auth.signOut();
   };
 
