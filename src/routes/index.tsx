@@ -517,13 +517,20 @@ function ProfileSheet({
         </div>
 
         <label className="block text-[10px] uppercase tracking-widest text-white/40">Nama tampilan</label>
-        <input
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          maxLength={40}
-          className="mt-1 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-[color:var(--n)]"
-          style={{ ["--n" as never]: NEON }}
-        />
+        <div className="relative mt-1">
+          <input
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            maxLength={40}
+            className={`w-full rounded-lg border border-white/10 bg-black/40 py-2 pl-3 text-sm outline-none focus:border-[color:var(--n)] ${verified ? "pr-9" : "pr-3"}`}
+            style={{ ["--n" as never]: NEON }}
+          />
+          {verified && (
+            <span className="absolute right-2 top-1/2 -translate-y-1/2">
+              <VerifiedCheck size={18} />
+            </span>
+          )}
+        </div>
 
         <label className="mt-3 block text-[10px] uppercase tracking-widest text-white/40">Username</label>
         <div className="mt-1 flex items-center rounded-lg border border-white/10 bg-black/40">
@@ -532,9 +539,15 @@ function ProfileSheet({
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             maxLength={24}
-            className="flex-1 bg-transparent py-2 pr-3 text-sm outline-none"
+            className="flex-1 bg-transparent py-2 pr-2 text-sm outline-none"
           />
+          {verified && (
+            <span className="pr-2">
+              <VerifiedCheck size={18} />
+            </span>
+          )}
         </div>
+
 
         <label className="mt-3 block text-[10px] uppercase tracking-widest text-white/40">Bio</label>
         <textarea
