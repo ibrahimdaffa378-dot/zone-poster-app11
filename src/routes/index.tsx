@@ -392,18 +392,37 @@ function LoginGate({ onSignedIn }: { onSignedIn: () => void }) {
 }
 
 // ---------------- BADGES ----------------
+// TikTok/X-style verified checkmark — scalloped blue badge with white check
+function VerifiedCheck({ size = 16, title = "Verified" }: { size?: number; title?: string }) {
+  return (
+    <span
+      title={title}
+      aria-label={title}
+      className="inline-grid shrink-0 place-items-center align-middle"
+      style={{ width: size, height: size }}
+    >
+      <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+        <path
+          fill="#1d9bf0"
+          d="M12 1.5l2.36 1.86 3-.27.92 2.86 2.86.92-.27 3L22.5 12l-1.86 2.36.27 3-2.86.92-.92 2.86-3-.27L12 22.5l-2.36-1.86-3 .27-.92-2.86-2.86-.92.27-3L1.5 12l1.86-2.36-.27-3 2.86-.92.92-2.86 3 .27L12 1.5z"
+        />
+        <path
+          d="M7.5 12.2l3 3 6-6"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function TierBadges({ tier }: { tier: Tier }) {
   if (tier === "dev") {
-    return (
-      <span className="inline-flex items-center gap-1">
-        <span title="Verified Developer" className="grid h-4 w-4 place-items-center rounded-full text-black" style={{ background: NEON }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M5 12l5 5L20 7" /></svg>
-        </span>
-        <span title="Verified Staff" className="grid h-4 w-4 place-items-center rounded-full text-white" style={{ background: "#a855f7" }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M5 12l5 5L20 7" /></svg>
-        </span>
-      </span>
-    );
+    // Quiz survivors / developers get the official blue verified check
+    return <VerifiedCheck title="Verified" />;
   }
   if (tier === "pro") {
     return (
