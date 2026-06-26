@@ -392,18 +392,37 @@ function LoginGate({ onSignedIn }: { onSignedIn: () => void }) {
 }
 
 // ---------------- BADGES ----------------
+// TikTok/X-style verified checkmark — scalloped blue badge with white check
+function VerifiedCheck({ size = 16, title = "Verified" }: { size?: number; title?: string }) {
+  return (
+    <span
+      title={title}
+      aria-label={title}
+      className="inline-grid shrink-0 place-items-center align-middle"
+      style={{ width: size, height: size }}
+    >
+      <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+        <path
+          fill="#1d9bf0"
+          d="M12 1.5l2.36 1.86 3-.27.92 2.86 2.86.92-.27 3L22.5 12l-1.86 2.36.27 3-2.86.92-.92 2.86-3-.27L12 22.5l-2.36-1.86-3 .27-.92-2.86-2.86-.92.27-3L1.5 12l1.86-2.36-.27-3 2.86-.92.92-2.86 3 .27L12 1.5z"
+        />
+        <path
+          d="M7.5 12.2l3 3 6-6"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function TierBadges({ tier }: { tier: Tier }) {
   if (tier === "dev") {
-    return (
-      <span className="inline-flex items-center gap-1">
-        <span title="Verified Developer" className="grid h-4 w-4 place-items-center rounded-full text-black" style={{ background: NEON }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M5 12l5 5L20 7" /></svg>
-        </span>
-        <span title="Verified Staff" className="grid h-4 w-4 place-items-center rounded-full text-white" style={{ background: "#a855f7" }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M5 12l5 5L20 7" /></svg>
-        </span>
-      </span>
-    );
+    // Quiz survivors / developers get the official blue verified check
+    return <VerifiedCheck title="Verified" />;
   }
   if (tier === "pro") {
     return (
@@ -419,15 +438,18 @@ function TierBadges({ tier }: { tier: Tier }) {
 // ---------------- PROFILE EDITOR ----------------
 function ProfileSheet({
   profile,
+  tier,
   onClose,
   onSaved,
   onSignOut,
 }: {
   profile: Profile;
+  tier: Tier;
   onClose: () => void;
   onSaved: (p: Profile) => void;
   onSignOut: () => void;
 }) {
+  const verified = tier === "dev";
   const [displayName, setDisplayName] = useState(profile.display_name ?? "");
   const [username, setUsername] = useState(profile.username);
   const [bio, setBio] = useState(profile.bio ?? "");
@@ -495,13 +517,20 @@ function ProfileSheet({
         </div>
 
         <label className="block text-[10px] uppercase tracking-widest text-white/40">Nama tampilan</label>
-        <input
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          maxLength={40}
-          className="mt-1 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:border-[color:var(--n)]"
-          style={{ ["--n" as never]: NEON }}
-        />
+        <div className="relative mt-1">
+          <input
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            maxLength={40}
+            className={`w-full rounded-lg border border-white/10 bg-black/40 py-2 pl-3 text-sm outline-none focus:border-[color:var(--n)] ${verified ? "pr-9" : "pr-3"}`}
+            style={{ ["--n" as never]: NEON }}
+          />
+          {verified && (
+            <span className="absolute right-2 top-1/2 -translate-y-1/2">
+              <VerifiedCheck size={18} />
+            </span>
+          )}
+        </div>
 
         <label className="mt-3 block text-[10px] uppercase tracking-widest text-white/40">Username</label>
         <div className="mt-1 flex items-center rounded-lg border border-white/10 bg-black/40">
@@ -510,9 +539,15 @@ function ProfileSheet({
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             maxLength={24}
-            className="flex-1 bg-transparent py-2 pr-3 text-sm outline-none"
+            className="flex-1 bg-transparent py-2 pr-2 text-sm outline-none"
           />
+          {verified && (
+            <span className="pr-2">
+              <VerifiedCheck size={18} />
+            </span>
+          )}
         </div>
+
 
         <label className="mt-3 block text-[10px] uppercase tracking-widest text-white/40">Bio</label>
         <textarea
@@ -1005,6 +1040,7 @@ function App({ session }: { session: Session }) {
       {showProfile && me && (
         <ProfileSheet
           profile={me}
+          tier={tier}
           onClose={() => setShowProfile(false)}
           onSaved={(p) => { setMe(p); setProfilesMap((m) => ({ ...m, [p.id]: p })); }}
           onSignOut={signOut}
