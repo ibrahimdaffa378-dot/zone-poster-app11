@@ -450,6 +450,7 @@ function ProfileSheet({
   onSignOut: () => void;
 }) {
   const verified = tier === "dev";
+  const [displayName, setDisplayName] = useState(profile.display_name ?? "");
   const [username, setUsername] = useState(profile.username);
   const [bio, setBio] = useState(profile.bio ?? "");
   const [color, setColor] = useState(profile.avatar_color);
