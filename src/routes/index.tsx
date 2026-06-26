@@ -438,16 +438,18 @@ function TierBadges({ tier }: { tier: Tier }) {
 // ---------------- PROFILE EDITOR ----------------
 function ProfileSheet({
   profile,
+  tier,
   onClose,
   onSaved,
   onSignOut,
 }: {
   profile: Profile;
+  tier: Tier;
   onClose: () => void;
   onSaved: (p: Profile) => void;
   onSignOut: () => void;
 }) {
-  const [displayName, setDisplayName] = useState(profile.display_name ?? "");
+  const verified = tier === "dev";
   const [username, setUsername] = useState(profile.username);
   const [bio, setBio] = useState(profile.bio ?? "");
   const [color, setColor] = useState(profile.avatar_color);
