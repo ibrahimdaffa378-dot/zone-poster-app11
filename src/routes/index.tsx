@@ -1400,6 +1400,52 @@ function App({ session }: { session: Session }) {
         </div>
       </main>
 
+      {activeTab === "community" && (
+        <main className="mx-auto max-w-3xl px-4 py-5 pb-24 animate-fade-in">
+          <CommunityFeed
+            posts={posts}
+            onLike={toggleLike}
+            onRepost={toggleRepost}
+            onCreate={() => setShowCreate(true)}
+          />
+        </main>
+      )}
+
+      {showCreate && (
+        <CreatePostModal
+          author={authorName}
+          handle={authorHandle}
+          color={meColor}
+          verified={authorVerified}
+          onClose={() => setShowCreate(false)}
+          onPost={createPost}
+        />
+      )}
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-black/90 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl">
+          {([
+            { key: "watch", label: "Nonton", icon: "▶" },
+            { key: "community", label: "Komunitas", icon: "◎" },
+          ] as const).map((t) => {
+            const active = activeTab === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                className="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold uppercase tracking-widest transition"
+                style={active ? { color: NEON } : { color: "rgba(255,255,255,0.5)" }}
+              >
+                <span className="text-lg leading-none">{t.icon}</span>
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+
       {showProfile && me && (
         <ProfileSheet
           profile={me}
