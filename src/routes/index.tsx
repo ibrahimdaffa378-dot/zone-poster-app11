@@ -585,6 +585,294 @@ function ProfileSheet({
 }
 
 // ---------------- MAIN ----------------
+// ---------------- COMMUNITY (X ZONE) ----------------
+type BotComment = { id: string; name: string; handle: string; color: string; text: string; ago: string };
+type CommunityPost = {
+  id: string;
+  author: string;
+  handle: string;
+  color: string;
+  verified?: boolean;
+  caption: string;
+  hashtags: string[];
+  mentions: string[];
+  image: string;
+  createdAt: number;
+  likes: number;
+  reposts: number;
+  views: number;
+  comments: BotComment[];
+  liked?: boolean;
+  reposted?: boolean;
+};
+
+const BOT_POOL: { name: string; handle: string; color: string }[] = [
+  { name: "Riko Wibu", handle: "rikowbu", color: "#ff6b9d" },
+  { name: "Sesepuh DC2", handle: "dc2_legend", color: "#39FF7A" },
+  { name: "Nadia_98", handle: "nadia98x", color: "#f5c518" },
+  { name: "GamerBocil", handle: "boxfruit_main", color: "#00b3ff" },
+  { name: "Fahmi Anim", handle: "fahmi.anims", color: "#ff8c42" },
+  { name: "Yura", handle: "yuraaa_", color: "#c084fc" },
+  { name: "AnimeLord", handle: "lord.anime", color: "#ef4444" },
+  { name: "Bocah FYP", handle: "fyp.bocah", color: "#22d3ee" },
+  { name: "Kentang", handle: "kentang.crispy", color: "#facc15" },
+  { name: "Vira", handle: "vira.ntt", color: "#ec4899" },
+  { name: "Rangga", handle: "rangga.op", color: "#84cc16" },
+  { name: "Miko", handle: "miko_donghua", color: "#3b82f6" },
+  { name: "Elsa", handle: "elsa.riil", color: "#fb7185" },
+  { name: "Bang Jul", handle: "juli.gasken", color: "#a3e635" },
+  { name: "Dinda", handle: "dindaaa_x", color: "#e879f9" },
+  { name: "Reza", handle: "rezaa.op", color: "#fbbf24" },
+  { name: "Tio", handle: "tio.gg", color: "#38bdf8" },
+  { name: "Sinta", handle: "sinta.wibu", color: "#f472b6" },
+];
+
+const COMMENT_POOL: string[] = [
+  "Menyala abangkuh! 🔥 Gak sabar nunggu eps 6 rilis!",
+  "Gokil parah, lewat FYP gua langsung tak tekan loh, stickman ijonya op banget 😭",
+  "Riil no fek, ini baru masterpiece animator lokal. Kelas bang Sion!",
+  "Info mabar Blox Fruits sekalian nungguin Akar Terlarang rilis wkwk",
+  "Definisi sesepuh DC2 mah bebas, animasinya smooth parah serasa nonton anime jepang 👑",
+  "Plot twist-nya di eps 6 pasti gila sih ini, gasss min jangan lama-lama rilisnya!",
+  "Gua save dulu, dapet rekomendasi tontonan keren dari IG Reels nih",
+  "GGWP! Kerudung hitam di belakang itu siapa lagi dah bikin penasaran aja",
+  "Anjay posternya aesthetic bgt cok, wallpaper hp gua nih 🔥🔥",
+  "Bang Sion emang gak ada obat, karya lokal rasa internasional 🗿",
+  "Bentar bentar itu akar naganya bakalan ngelilit siapa cuy 😭😭",
+  "Sumpah ini tuh masuk banget di FYP tiktok gw, langsung follow!",
+  "Gaskeun bang, komunitas siap war di kolom komen kalo eps 6 telat 🗿🗿",
+  "W nonton dari eps 1 sampe sekarang gak pernah skip iklan, respect!",
+  "Ini animasi bikinnya berapa bulan sih bang, detail parah asli",
+  "Bapak² gabut mampir, anak gw suka banget serial ini 👍",
+  "Gua yg dari luar fandom auto ngerti sih, story tellingnya rapih",
+  "Sepi banget yg komen? oh ternyata belom rilis wkwkw",
+  "DC2 fam mana suaranyaaaa 📢📢",
+  "Gg bang, ini tuh worth banget buat di rewatch berkali kali",
+  "Kok gua ngerasa Lei Zhen makin ganteng ya makin banyak eps 😳",
+  "Auto notif on buat eps 6 nya gass!",
+  "Ngab bagi link donasi buat animatornya dong biar makin semangat 🙏",
+  "Kok bisa sih detail sekecil ini kena semua, mantul lah",
+  "Yg dislike pasti fans sinetron 😹",
+  "Real talk ini kualitas donghua lokal udh bisa saingin bilibili",
+  "Ampun bang gua nunggu eps 6 sampe rambut gua tumbuh panjang 💀",
+  "Aku suka bagian pas naga akarnya muncul, sereeeem tapi keren 😭",
+  "Njir baru ngeh ini karya anak bangsa, bangga cok!",
+  "Gua share ke grup wa, sekelas gua auto nonton 🔥",
+  "Nunggu eps 6 sambil grinding di free fire wkwk",
+  "Kualitas 4K, ceritanya 8K, mantap bang keep it up!",
+];
+
+function pickRandom<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+function randomId() { return Math.random().toString(36).slice(2, 10); }
+
+function timeAgoShort(ms: number) {
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 60) return `${s}d`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}j`;
+  return `${Math.floor(h / 24)}h`;
+}
+
+function CreatePostModal({
+  onClose, onPost, author, handle, color, verified,
+}: {
+  onClose: () => void;
+  onPost: (p: { caption: string; hashtags: string[]; mentions: string[]; image: string }) => void;
+  author: string; handle: string; color: string; verified?: boolean;
+}) {
+  const [caption, setCaption] = useState("Sneak peek Episode 6 — AKAR TERLARANG 🔥 siap-siap ya cuy!");
+  const [hashtags, setHashtags] = useState("HeavenDefyingDragonforce AkarTerlarang DonghuaLokal");
+  const [mentions, setMentions] = useState("Sion_dfkit ZoneApp");
+
+  const submit = () => {
+    if (!caption.trim()) return;
+    onPost({
+      caption: caption.trim(),
+      hashtags: hashtags.split(/[\s,]+/).map((s) => s.replace(/^#/, "").trim()).filter(Boolean),
+      mentions: mentions.split(/[\s,]+/).map((s) => s.replace(/^@/, "").trim()).filter(Boolean),
+      image: ep6Poster.url,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-t-2xl border border-white/10 bg-[#0d0f0d] p-4 sm:rounded-2xl animate-fade-in">
+        <div className="mb-3 flex items-center justify-between">
+          <button onClick={onClose} className="text-xs text-white/60 hover:text-white">Batal</button>
+          <h3 className="text-sm font-black uppercase tracking-widest">Postingan Baru</h3>
+          <button onClick={submit} className="rounded-full px-3 py-1 text-xs font-black text-black" style={{ background: NEON }}>
+            Posting
+          </button>
+        </div>
+
+        <div className="flex items-start gap-2">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-black" style={{ background: color }}>
+            {(author || "?").charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1 text-xs">
+              <span className="font-bold">{author}</span>
+              {verified && <VerifiedCheck size={12} />}
+              <span className="text-white/40">@{handle}</span>
+            </div>
+
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Apa yang lagi terjadi?"
+              rows={3}
+              className="mt-2 w-full resize-none bg-transparent text-sm placeholder:text-white/30 focus:outline-none"
+              maxLength={280}
+            />
+
+            <div className="mt-2 space-y-2 text-xs">
+              <label className="block">
+                <span className="text-white/50">Hashtag</span>
+                <input value={hashtags} onChange={(e) => setHashtags(e.target.value)}
+                  placeholder="AkarTerlarang HDD"
+                  className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-2 py-1.5 focus:border-[color:var(--n)] focus:outline-none"
+                  style={{ ["--n" as never]: NEON }} />
+              </label>
+              <label className="block">
+                <span className="text-white/50">Mention</span>
+                <input value={mentions} onChange={(e) => setMentions(e.target.value)}
+                  placeholder="Sion_dfkit"
+                  className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-2 py-1.5 focus:border-[color:var(--n)] focus:outline-none"
+                  style={{ ["--n" as never]: NEON }} />
+              </label>
+            </div>
+
+            <div className="mt-3 overflow-hidden rounded-xl border border-white/10">
+              <img src={ep6Poster.url} alt="Episode 6 — Akar Terlarang" className="w-full object-cover" loading="lazy" />
+              <div className="flex items-center justify-between bg-black/60 px-3 py-2 text-[10px] text-white/60">
+                <span>📎 ep6-akar-terlarang.jpg</span>
+                <span style={{ color: NEON }}>Terpilih</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CommunityFeed({
+  posts, onLike, onRepost, onCreate,
+}: {
+  posts: CommunityPost[];
+  onLike: (id: string) => void;
+  onRepost: (id: string) => void;
+  onCreate: () => void;
+}) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => force((t) => t + 1), 5000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <>
+      <div className="sticky top-0 z-10 -mx-4 mb-3 border-b border-white/10 bg-[#0a0d0b]/90 px-4 py-3 backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Zone Community</p>
+            <h2 className="text-lg font-black">X Zone <span style={{ color: NEON }}>Feed</span></h2>
+          </div>
+          <span className="text-[10px] uppercase tracking-widest text-white/40">{posts.length} post</span>
+        </div>
+      </div>
+
+      {posts.length === 0 && (
+        <div className="rounded-xl border border-dashed border-white/10 p-8 text-center text-xs text-white/50">
+          Belum ada postingan. Tekan tombol <span style={{ color: NEON }}>+</span> di pojok kanan bawah untuk membuat postingan pertama.
+        </div>
+      )}
+
+      <ul className="space-y-3">
+        {posts.map((p) => (
+          <li key={p.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+            <div className="flex items-start gap-2">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-black text-black" style={{ background: p.color }}>
+                {p.author.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1 text-xs">
+                  <span className="font-bold text-white/95">{p.author}</span>
+                  {p.verified && <VerifiedCheck size={12} />}
+                  <span className="text-white/40">@{p.handle}</span>
+                  <span className="text-white/40">· {timeAgoShort(p.createdAt)}</span>
+                </div>
+                <p className="mt-1 whitespace-pre-wrap break-words text-sm text-white/90">
+                  {p.caption}{" "}
+                  {p.mentions.map((m) => (
+                    <span key={m} style={{ color: NEON }}>@{m} </span>
+                  ))}
+                  {p.hashtags.map((h) => (
+                    <span key={h} className="text-sky-400">#{h} </span>
+                  ))}
+                </p>
+
+                <div className="mt-2 overflow-hidden rounded-xl border border-white/10">
+                  <img src={p.image} alt="post" className="w-full object-cover" loading="lazy" />
+                </div>
+
+                <div className="mt-2 flex items-center gap-4 text-[11px] text-white/60">
+                  <button onClick={() => onLike(p.id)} className={`flex items-center gap-1 hover:text-pink-400 ${p.liked ? "text-pink-400" : ""}`}>
+                    <span>{p.liked ? "❤️" : "🤍"}</span>
+                    <span className="tabular-nums">{p.likes.toLocaleString("id-ID")}</span>
+                  </button>
+                  <button onClick={() => onRepost(p.id)} className={`flex items-center gap-1 hover:text-emerald-400 ${p.reposted ? "text-emerald-400" : ""}`}>
+                    <span>🔁</span>
+                    <span className="tabular-nums">{p.reposts.toLocaleString("id-ID")}</span>
+                  </button>
+                  <span className="flex items-center gap-1">
+                    <span>💬</span>
+                    <span className="tabular-nums">{p.comments.length.toLocaleString("id-ID")}</span>
+                  </span>
+                  <span className="ml-auto flex items-center gap-1">
+                    <span>👁</span>
+                    <span className="tabular-nums">{p.views.toLocaleString("id-ID")}</span>
+                  </span>
+                </div>
+
+                {p.comments.length > 0 && (
+                  <ul className="mt-3 space-y-2 border-t border-white/5 pt-3">
+                    {p.comments.slice(0, 30).map((c) => (
+                      <li key={c.id} className="flex items-start gap-2 animate-fade-in">
+                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-black text-black" style={{ background: c.color }}>
+                          {c.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-1 text-[11px]">
+                            <span className="font-bold text-white/90">{c.name}</span>
+                            <span className="text-white/40">@{c.handle} · {c.ago}</span>
+                          </div>
+                          <p className="break-words text-xs text-white/80">{c.text}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        onClick={onCreate}
+        aria-label="Buat postingan"
+        className="fixed bottom-20 right-4 z-40 grid h-14 w-14 place-items-center rounded-full text-3xl font-black text-black transition hover:scale-105"
+        style={{ background: NEON, boxShadow: `0 0 24px ${NEON}80` }}
+      >
+        +
+      </button>
+    </>
+  );
+}
+
 function Index() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
