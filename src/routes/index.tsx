@@ -923,6 +923,9 @@ function App({ session }: { session: Session }) {
   const [tier, setTier] = useState<Tier>("standard");
   const [alias, setAlias] = useState<string>("");
   const [showWelcome, setShowWelcome] = useState(true);
+  const [activeTab, setActiveTab] = useState<"watch" | "community">("watch");
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
     try {
