@@ -1170,7 +1170,7 @@ function App({ session }: { session: Session }) {
         )}
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-5 space-y-4 animate-fade-in">
+      <main className={`mx-auto max-w-3xl px-4 py-5 space-y-4 pb-24 animate-fade-in ${activeTab === "watch" ? "" : "hidden"}`}>
         {/* Menu Utama — Katalog */}
         <section>
           <div className="mb-2 flex items-end justify-between">
