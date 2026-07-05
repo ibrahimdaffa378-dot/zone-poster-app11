@@ -1054,6 +1054,77 @@ function App({ session }: { session: Session }) {
     await supabase.auth.signOut();
   };
 
+  // ---- Community actions ----
+  const authorName = alias || me?.display_name || me?.username || "kamu";
+  const authorHandle = (alias || me?.username || "kamu").replace(/[^a-zA-Z0-9_]/g, "");
+  const authorVerified = tier === "dev";
+
+  const createPost = (data: { caption: string; hashtags: string[]; mentions: string[]; image: string }) => {
+    const post: CommunityPost = {
+      id: randomId(),
+      author: authorName,
+      handle: authorHandle,
+      color: meColor,
+      verified: authorVerified,
+      caption: data.caption,
+      hashtags: data.hashtags,
+      mentions: data.mentions,
+      image: data.image,
+      createdAt: Date.now(),
+      likes: 0,
+      reposts: 0,
+      views: 12,
+      comments: [],
+    };
+    setPosts((ps) => [post, ...ps]);
+    setShowCreate(false);
+    setActiveTab("community");
+
+    // Simulate viral explosion
+    let ticks = 0;
+    const viralId = window.setInterval(() => {
+      ticks += 1;
+      setPosts((ps) => ps.map((p) => {
+        if (p.id !== post.id) return p;
+        const bump = Math.floor(50 + Math.random() * 350);
+        return {
+          ...p,
+          likes: p.likes + Math.floor(20 + Math.random() * 180),
+          reposts: p.reposts + Math.floor(5 + Math.random() * 45),
+          views: p.views + bump * 8,
+        };
+      }));
+      if (ticks > 30) window.clearInterval(viralId);
+    }, 700);
+
+    // Flood bot comments
+    let cticks = 0;
+    const usedTexts = new Set<string>();
+    const commentId = window.setInterval(() => {
+      cticks += 1;
+      const bot = pickRandom(BOT_POOL);
+      let text = pickRandom(COMMENT_POOL);
+      let guard = 0;
+      while (usedTexts.has(text) && guard < 5) { text = pickRandom(COMMENT_POOL); guard++; }
+      usedTexts.add(text);
+      const comment: BotComment = {
+        id: randomId(),
+        name: bot.name,
+        handle: bot.handle,
+        color: bot.color,
+        text,
+        ago: `${cticks}d`,
+      };
+      setPosts((ps) => ps.map((p) => p.id === post.id ? { ...p, comments: [comment, ...p.comments] } : p));
+      if (cticks > 40) window.clearInterval(commentId);
+    }, 450);
+  };
+
+  const toggleLike = (id: string) => setPosts((ps) => ps.map((p) => p.id === id
+    ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p));
+  const toggleRepost = (id: string) => setPosts((ps) => ps.map((p) => p.id === id
+    ? { ...p, reposted: !p.reposted, reposts: p.reposts + (p.reposted ? -1 : 1) } : p));
+
   const progress = dur ? (time / dur) * 100 : 0;
   const meColor = me?.avatar_color ?? NEON;
   const meInitial = (me?.display_name || me?.username || "?").charAt(0).toUpperCase();
