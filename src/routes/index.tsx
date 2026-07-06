@@ -420,6 +420,29 @@ function VerifiedCheck({ size = 16, title = "Verified" }: { size?: number; title
   );
 }
 
+function DevPurpleCheck({ size = 14, title = "Developer" }: { size?: number; title?: string }) {
+  return (
+    <span
+      title={title}
+      aria-label={title}
+      className="inline-grid shrink-0 place-items-center align-middle"
+      style={{ width: size, height: size }}
+    >
+      <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+        <circle cx="12" cy="12" r="12" fill="#8B5CF6" />
+        <path
+          d="M7 12l3 3 7-7"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function TierBadges({ tier }: { tier: Tier }) {
   if (tier === "dev") {
     // Quiz survivors / developers get the official blue verified check
@@ -440,12 +463,14 @@ function TierBadges({ tier }: { tier: Tier }) {
 function ProfileSheet({
   profile,
   tier,
+  isOwner,
   onClose,
   onSaved,
   onSignOut,
 }: {
   profile: Profile;
   tier: Tier;
+  isOwner: boolean;
   onClose: () => void;
   onSaved: (p: Profile) => void;
   onSignOut: () => void;
@@ -516,6 +541,19 @@ function ProfileSheet({
             ))}
           </div>
         </div>
+
+        {isOwner && (
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="flex items-center gap-1 text-sm font-bold">
+              <span>{displayName || username || "Sion_dfkit"}</span>
+              <DevPurpleCheck size={16} title="Developer / Owner" />
+            </div>
+            <div className="flex items-center gap-1 text-xs text-white/50">
+              <span>@{username}</span>
+              <DevPurpleCheck size={14} title="Developer / Owner" />
+            </div>
+          </div>
+        )}
 
         <label className="block text-[10px] uppercase tracking-widest text-white/40">Nama tampilan</label>
         <div className="relative mt-1">
@@ -1110,6 +1148,7 @@ function App({ session }: { session: Session }) {
   const authorName = alias || me?.display_name || me?.username || "kamu";
   const authorHandle = (alias || me?.username || "kamu").replace(/[^a-zA-Z0-9_]/g, "");
   const authorVerified = tier === "dev";
+  const isOwner = alias === "Sion_dfkit";
 
   const createPost = (data: { caption: string; hashtags: string[]; mentions: string[]; image: string }) => {
     const post: CommunityPost = {
@@ -1209,6 +1248,7 @@ function App({ session }: { session: Session }) {
               {meInitial}
             </span>
             <span className="text-xs font-bold">@{alias || me?.username || "..."}</span>
+            {isOwner && <DevPurpleCheck size={14} title="Developer / Owner" />}
             <TierBadges tier={tier} />
           </button>
         </div>
@@ -1502,6 +1542,7 @@ function App({ session }: { session: Session }) {
         <ProfileSheet
           profile={me}
           tier={tier}
+          isOwner={isOwner}
           onClose={() => setShowProfile(false)}
           onSaved={(p) => { setMe(p); setProfilesMap((m) => ({ ...m, [p.id]: p })); }}
           onSignOut={signOut}
