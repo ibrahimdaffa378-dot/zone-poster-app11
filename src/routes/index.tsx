@@ -770,9 +770,10 @@ function CreatePostModal({
                     type="button"
                     onClick={clearImage}
                     aria-label="Hapus foto"
-                    className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white hover:bg-black"
+                    className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-sm font-bold text-white hover:bg-black"
                   >
-                    <X className="h-4 w-4" />
+                    ✕
+
                   </button>
                   <button
                     type="button"
