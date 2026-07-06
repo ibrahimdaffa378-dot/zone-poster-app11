@@ -685,6 +685,22 @@ function CreatePostModal({
   const [caption, setCaption] = useState("Sneak peek Episode 6 — AKAR TERLARANG 🔥 siap-siap ya cuy!");
   const [hashtags, setHashtags] = useState("HeavenDefyingDragonforce AkarTerlarang DonghuaLokal");
   const [mentions, setMentions] = useState("Sion_dfkit ZoneApp");
+  const [image, setImage] = useState<string | null>(poster.url);
+  const [imageName, setImageName] = useState<string>("hdd-poster.jpg");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const pickFile = () => fileRef.current?.click();
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImage(String(reader.result));
+      setImageName(f.name);
+    };
+    reader.readAsDataURL(f);
+  };
+  const clearImage = () => { setImage(null); setImageName(""); };
 
   const submit = () => {
     if (!caption.trim()) return;
@@ -692,9 +708,10 @@ function CreatePostModal({
       caption: caption.trim(),
       hashtags: hashtags.split(/[\s,]+/).map((s) => s.replace(/^#/, "").trim()).filter(Boolean),
       mentions: mentions.split(/[\s,]+/).map((s) => s.replace(/^@/, "").trim()).filter(Boolean),
-      image: ep6Poster.url,
+      image: image ?? "",
     });
   };
+
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center">
