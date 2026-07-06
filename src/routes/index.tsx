@@ -542,6 +542,19 @@ function ProfileSheet({
           </div>
         </div>
 
+        {isOwner && (
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="flex items-center gap-1 text-sm font-bold">
+              <span>{displayName || username || "Sion_dfkit"}</span>
+              <DevPurpleCheck size={16} title="Developer / Owner" />
+            </div>
+            <div className="flex items-center gap-1 text-xs text-white/50">
+              <span>@{username}</span>
+              <DevPurpleCheck size={14} title="Developer / Owner" />
+            </div>
+          </div>
+        )}
+
         <label className="block text-[10px] uppercase tracking-widest text-white/40">Nama tampilan</label>
         <div className="relative mt-1">
           <input
