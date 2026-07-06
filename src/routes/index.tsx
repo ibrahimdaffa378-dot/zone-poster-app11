@@ -685,6 +685,22 @@ function CreatePostModal({
   const [caption, setCaption] = useState("Sneak peek Episode 6 — AKAR TERLARANG 🔥 siap-siap ya cuy!");
   const [hashtags, setHashtags] = useState("HeavenDefyingDragonforce AkarTerlarang DonghuaLokal");
   const [mentions, setMentions] = useState("Sion_dfkit ZoneApp");
+  const [image, setImage] = useState<string | null>(poster.url);
+  const [imageName, setImageName] = useState<string>("hdd-poster.jpg");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const pickFile = () => fileRef.current?.click();
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImage(String(reader.result));
+      setImageName(f.name);
+    };
+    reader.readAsDataURL(f);
+  };
+  const clearImage = () => { setImage(null); setImageName(""); };
 
   const submit = () => {
     if (!caption.trim()) return;
@@ -692,9 +708,10 @@ function CreatePostModal({
       caption: caption.trim(),
       hashtags: hashtags.split(/[\s,]+/).map((s) => s.replace(/^#/, "").trim()).filter(Boolean),
       mentions: mentions.split(/[\s,]+/).map((s) => s.replace(/^@/, "").trim()).filter(Boolean),
-      image: ep6Poster.url,
+      image: image ?? "",
     });
   };
+
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center">
@@ -744,13 +761,48 @@ function CreatePostModal({
               </label>
             </div>
 
-            <div className="mt-3 overflow-hidden rounded-xl border border-white/10">
-              <img src={ep6Poster.url} alt="Episode 6 — Akar Terlarang" className="w-full object-cover" loading="lazy" />
-              <div className="flex items-center justify-between bg-black/60 px-3 py-2 text-[10px] text-white/60">
-                <span>📎 ep6-akar-terlarang.jpg</span>
-                <span style={{ color: NEON }}>Terpilih</span>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+            {image ? (
+              <div className="mt-3 overflow-hidden rounded-xl border border-white/10">
+                <div className="relative">
+                  <img src={image} alt="Lampiran postingan" className="w-full object-cover" loading="lazy" />
+                  <button
+                    type="button"
+                    onClick={clearImage}
+                    aria-label="Hapus foto"
+                    className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-sm font-bold text-white hover:bg-black"
+                  >
+                    ✕
+
+                  </button>
+                  <button
+                    type="button"
+                    onClick={pickFile}
+                    className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-black"
+                  >
+                    Ganti Foto
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={pickFile}
+                  className="flex w-full items-center justify-between bg-black/60 px-3 py-2 text-[10px] text-white/60 hover:bg-black/80"
+                >
+                  <span className="truncate">📎 {imageName || "gambar.jpg"}</span>
+                  <span style={{ color: NEON }}>Terpilih • klik untuk ganti</span>
+                </button>
               </div>
-            </div>
+            ) : (
+              <button
+                type="button"
+                onClick={pickFile}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-black/30 px-3 py-6 text-xs text-white/60 hover:border-white/40 hover:text-white"
+              >
+                <span>🖼️</span>
+                <span>Tambah / Pilih Foto dari Galeri</span>
+              </button>
+            )}
+
           </div>
         </div>
       </div>
