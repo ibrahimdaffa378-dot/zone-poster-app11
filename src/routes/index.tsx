@@ -420,6 +420,29 @@ function VerifiedCheck({ size = 16, title = "Verified" }: { size?: number; title
   );
 }
 
+function DevPurpleCheck({ size = 14, title = "Developer" }: { size?: number; title?: string }) {
+  return (
+    <span
+      title={title}
+      aria-label={title}
+      className="inline-grid shrink-0 place-items-center align-middle"
+      style={{ width: size, height: size }}
+    >
+      <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+        <circle cx="12" cy="12" r="12" fill="#8B5CF6" />
+        <path
+          d="M7 12l3 3 7-7"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function TierBadges({ tier }: { tier: Tier }) {
   if (tier === "dev") {
     // Quiz survivors / developers get the official blue verified check
