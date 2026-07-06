@@ -1529,6 +1529,7 @@ function App({ session }: { session: Session }) {
         <ProfileSheet
           profile={me}
           tier={tier}
+          isOwner={isOwner}
           onClose={() => setShowProfile(false)}
           onSaved={(p) => { setMe(p); setProfilesMap((m) => ({ ...m, [p.id]: p })); }}
           onSignOut={signOut}
