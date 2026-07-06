@@ -1233,6 +1233,7 @@ function App({ session }: { session: Session }) {
               {meInitial}
             </span>
             <span className="text-xs font-bold">@{alias || me?.username || "..."}</span>
+            {isOwner && <DevPurpleCheck size={14} title="Developer / Owner" />}
             <TierBadges tier={tier} />
           </button>
         </div>
