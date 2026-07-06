@@ -761,13 +761,47 @@ function CreatePostModal({
               </label>
             </div>
 
-            <div className="mt-3 overflow-hidden rounded-xl border border-white/10">
-              <img src={ep6Poster.url} alt="Episode 6 — Akar Terlarang" className="w-full object-cover" loading="lazy" />
-              <div className="flex items-center justify-between bg-black/60 px-3 py-2 text-[10px] text-white/60">
-                <span>📎 ep6-akar-terlarang.jpg</span>
-                <span style={{ color: NEON }}>Terpilih</span>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+            {image ? (
+              <div className="mt-3 overflow-hidden rounded-xl border border-white/10">
+                <div className="relative">
+                  <img src={image} alt="Lampiran postingan" className="w-full object-cover" loading="lazy" />
+                  <button
+                    type="button"
+                    onClick={clearImage}
+                    aria-label="Hapus foto"
+                    className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white hover:bg-black"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={pickFile}
+                    className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-black"
+                  >
+                    Ganti Foto
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={pickFile}
+                  className="flex w-full items-center justify-between bg-black/60 px-3 py-2 text-[10px] text-white/60 hover:bg-black/80"
+                >
+                  <span className="truncate">📎 {imageName || "gambar.jpg"}</span>
+                  <span style={{ color: NEON }}>Terpilih • klik untuk ganti</span>
+                </button>
               </div>
-            </div>
+            ) : (
+              <button
+                type="button"
+                onClick={pickFile}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-black/30 px-3 py-6 text-xs text-white/60 hover:border-white/40 hover:text-white"
+              >
+                <span>🖼️</span>
+                <span>Tambah / Pilih Foto dari Galeri</span>
+              </button>
+            )}
+
           </div>
         </div>
       </div>
