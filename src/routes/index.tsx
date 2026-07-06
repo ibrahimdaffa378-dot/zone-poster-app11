@@ -1133,6 +1133,7 @@ function App({ session }: { session: Session }) {
   const authorName = alias || me?.display_name || me?.username || "kamu";
   const authorHandle = (alias || me?.username || "kamu").replace(/[^a-zA-Z0-9_]/g, "");
   const authorVerified = tier === "dev";
+  const isOwner = alias === "Sion_dfkit";
 
   const createPost = (data: { caption: string; hashtags: string[]; mentions: string[]; image: string }) => {
     const post: CommunityPost = {
