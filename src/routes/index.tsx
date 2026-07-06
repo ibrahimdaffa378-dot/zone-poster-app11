@@ -463,12 +463,14 @@ function TierBadges({ tier }: { tier: Tier }) {
 function ProfileSheet({
   profile,
   tier,
+  isOwner,
   onClose,
   onSaved,
   onSignOut,
 }: {
   profile: Profile;
   tier: Tier;
+  isOwner: boolean;
   onClose: () => void;
   onSaved: (p: Profile) => void;
   onSignOut: () => void;
