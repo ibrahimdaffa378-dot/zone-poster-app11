@@ -624,7 +624,27 @@ function ProfileSheet({
 
 // ---------------- MAIN ----------------
 // ---------------- COMMUNITY (X ZONE) ----------------
-type BotComment = { id: string; name: string; handle: string; color: string; text: string; ago: string };
+type BotReply = {
+  id: string;
+  name: string;
+  handle: string;
+  color: string;
+  avatar: string;
+  text: string;
+  ago: string;
+  isUser?: boolean;
+  verified?: boolean;
+};
+type BotComment = {
+  id: string;
+  name: string;
+  handle: string;
+  color: string;
+  avatar: string;
+  text: string;
+  ago: string;
+  replies: BotReply[];
+};
 type CommunityPost = {
   id: string;
   author: string;
@@ -644,26 +664,104 @@ type CommunityPost = {
   reposted?: boolean;
 };
 
-const BOT_POOL: { name: string; handle: string; color: string }[] = [
-  { name: "Riko Wibu", handle: "rikowbu", color: "#ff6b9d" },
-  { name: "Sesepuh DC2", handle: "dc2_legend", color: "#39FF7A" },
-  { name: "Nadia_98", handle: "nadia98x", color: "#f5c518" },
-  { name: "GamerBocil", handle: "boxfruit_main", color: "#00b3ff" },
-  { name: "Fahmi Anim", handle: "fahmi.anims", color: "#ff8c42" },
-  { name: "Yura", handle: "yuraaa_", color: "#c084fc" },
-  { name: "AnimeLord", handle: "lord.anime", color: "#ef4444" },
-  { name: "Bocah FYP", handle: "fyp.bocah", color: "#22d3ee" },
-  { name: "Kentang", handle: "kentang.crispy", color: "#facc15" },
-  { name: "Vira", handle: "vira.ntt", color: "#ec4899" },
-  { name: "Rangga", handle: "rangga.op", color: "#84cc16" },
-  { name: "Miko", handle: "miko_donghua", color: "#3b82f6" },
-  { name: "Elsa", handle: "elsa.riil", color: "#fb7185" },
-  { name: "Bang Jul", handle: "juli.gasken", color: "#a3e635" },
-  { name: "Dinda", handle: "dindaaa_x", color: "#e879f9" },
-  { name: "Reza", handle: "rezaa.op", color: "#fbbf24" },
-  { name: "Tio", handle: "tio.gg", color: "#38bdf8" },
-  { name: "Sinta", handle: "sinta.wibu", color: "#f472b6" },
+function botAvatar(handle: string, style = "adventurer") {
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(handle)}&backgroundType=gradientLinear`;
+}
+
+const BOT_POOL: { name: string; handle: string; color: string; avatar: string }[] = [
+  { name: "Riko Wibu", handle: "rikowbu", color: "#ff6b9d", avatar: botAvatar("rikowbu", "adventurer") },
+  { name: "Sesepuh DC2", handle: "dc2_legend", color: "#39FF7A", avatar: botAvatar("dc2_legend", "lorelei") },
+  { name: "Nadia_98", handle: "nadia98x", color: "#f5c518", avatar: botAvatar("nadia98x", "avataaars") },
+  { name: "GamerBocil", handle: "boxfruit_main", color: "#00b3ff", avatar: botAvatar("boxfruit_main", "bottts") },
+  { name: "Fahmi Anim", handle: "fahmi.anims", color: "#ff8c42", avatar: botAvatar("fahmi.anims", "adventurer") },
+  { name: "Yura", handle: "yuraaa_", color: "#c084fc", avatar: botAvatar("yuraaa_", "lorelei") },
+  { name: "AnimeLord", handle: "lord.anime", color: "#ef4444", avatar: botAvatar("lord.anime", "personas") },
+  { name: "Bocah FYP", handle: "fyp.bocah", color: "#22d3ee", avatar: botAvatar("fyp.bocah", "avataaars") },
+  { name: "Kentang", handle: "kentang.crispy", color: "#facc15", avatar: botAvatar("kentang.crispy", "bottts") },
+  { name: "Vira", handle: "vira.ntt", color: "#ec4899", avatar: botAvatar("vira.ntt", "lorelei") },
+  { name: "Rangga", handle: "rangga.op", color: "#84cc16", avatar: botAvatar("rangga.op", "adventurer") },
+  { name: "Miko", handle: "miko_donghua", color: "#3b82f6", avatar: botAvatar("miko_donghua", "personas") },
+  { name: "Elsa", handle: "elsa.riil", color: "#fb7185", avatar: botAvatar("elsa.riil", "lorelei") },
+  { name: "Bang Jul", handle: "juli.gasken", color: "#a3e635", avatar: botAvatar("juli.gasken", "adventurer") },
+  { name: "Dinda", handle: "dindaaa_x", color: "#e879f9", avatar: botAvatar("dindaaa_x", "avataaars") },
+  { name: "Reza", handle: "rezaa.op", color: "#fbbf24", avatar: botAvatar("rezaa.op", "personas") },
+  { name: "Tio", handle: "tio.gg", color: "#38bdf8", avatar: botAvatar("tio.gg", "bottts") },
+  { name: "Sinta", handle: "sinta.wibu", color: "#f472b6", avatar: botAvatar("sinta.wibu", "lorelei") },
 ];
+
+// Keyword-based bot reply pools
+const REPLY_POOLS: { keys: RegExp; lines: string[] }[] = [
+  {
+    keys: /(bagus|keren|smooth|animasi|animation|epic|mantap|gokil|sick|kece|aesthetic)/i,
+    lines: [
+      "Emang boleh se-smooth itu animasinya? Kelazzz abangkuh! 🔥",
+      "Riil cuy, gua tonton berulang-ulang tetep merinding 😭",
+      "Frame by frame-nya juara sih, respect buat animatornya 👑",
+      "Fix ini kualitas donghua lokal udh naik kelas 🗿",
+    ],
+  },
+  {
+    keys: /(game|mabar|blox|fruit|ff|free ?fire|ml|mobile ?legend|valo|pubg)/i,
+    lines: [
+      "Bjirrr gas mabar Blox Fruits bang, drop nick lu sini wkwk 🦖",
+      "Room gua masih kosong nih, gaskeun mabar sambil nungguin eps 6 😤",
+      "Nickname gua: dfkit_op, add ya bang! 🎮",
+    ],
+  },
+  {
+    keys: /\?|kapan|siapa|kok|kenapa|gimana|dimana|apakah/i,
+    lines: [
+      "Wah kalau itu cuma bang Sion yang tahu plot twist-nya, kita tungguin aja eps 6 rilis ☝️😭",
+      "Bentar bentar itu masih rahasia sih, spoiler alert 🤫",
+      "Gua juga penasaran anjay, mari kita war di komen sampe dijawab 📢",
+    ],
+  },
+  {
+    keys: /(halo|hai|p|assalam|hello|hi)\b/i,
+    lines: [
+      "Halooo juga cuy, salken dari fandom Akar Terlarang 👋",
+      "Wih ada orang baru, welcome to Zone Community 🔥",
+    ],
+  },
+  {
+    keys: /(setuju|bener|betul|riil|real|fakta|fix)/i,
+    lines: [
+      "FIX! Sepemikiran kita bang, riil no fek 🤝",
+      "Bener banget, gua satu suara sama lu cok 🗿",
+    ],
+  },
+  {
+    keys: /(jelek|hate|garbage|sampah|bosen|buruk)/i,
+    lines: [
+      "Yah sabar bang, kalau gak suka ya scroll aja jangan war 😹",
+      "Selera orang beda-beda sih, tapi menurut gua sih worth ditonton 🙏",
+    ],
+  },
+  {
+    keys: /(kapan.*rilis|eps? ?6|episode ?6|akar|terlarang)/i,
+    lines: [
+      "Sabar bang, kabarnya sih eps 6 lagi finishing, siap-siap notif on! 🔔",
+      "Katanya bang Sion lagi polish frame-nya biar makin epic 🎬",
+    ],
+  },
+];
+
+const DEFAULT_REPLIES = [
+  "Wkwkwk bener juga sih bang 🗿",
+  "Setuju cuy, mari kita ramein terus komunitasnya 🔥",
+  "Anjay komennya relate parah 😹",
+  "Gasss keep it up, satu suara sama abangku 🤝",
+  "Menyala komunitas Zone-nya menyala 🔥🔥",
+  "Njir lu ngomong gitu bikin gua ngakak parah wkwk",
+];
+
+function pickBotReplyText(userText: string): string {
+  for (const pool of REPLY_POOLS) {
+    if (pool.keys.test(userText)) return pool.lines[Math.floor(Math.random() * pool.lines.length)];
+  }
+  return DEFAULT_REPLIES[Math.floor(Math.random() * DEFAULT_REPLIES.length)];
+}
+
 
 const COMMENT_POOL: string[] = [
   "Menyala abangkuh! 🔥 Gak sabar nunggu eps 6 rilis!",
@@ -848,13 +946,124 @@ function CreatePostModal({
   );
 }
 
+function CommentItem({
+  postId, comment, onReply, meName, meHandle, meColor, meAvatar, meVerified,
+}: {
+  postId: string;
+  comment: BotComment;
+  onReply: (postId: string, commentId: string, text: string) => void;
+  meName: string;
+  meHandle: string;
+  meColor: string;
+  meAvatar?: string;
+  meVerified?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const send = () => {
+    const t = text.trim();
+    if (!t) return;
+    onReply(postId, comment.id, t);
+    setText("");
+    setOpen(false);
+  };
+  return (
+    <li className="flex items-start gap-2 animate-fade-in">
+      <img
+        src={comment.avatar}
+        alt={comment.name}
+        loading="lazy"
+        className="h-8 w-8 shrink-0 rounded-full border border-white/10 bg-white/5 object-cover"
+        style={{ background: comment.color }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-1 text-[11px]">
+          <span className="font-bold text-white/90">{comment.name}</span>
+          <span className="text-white/40">@{comment.handle} · {comment.ago}</span>
+        </div>
+        <p className="break-words text-xs text-white/80">{comment.text}</p>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="mt-1 text-[10px] uppercase tracking-widest text-white/40 hover:text-[color:var(--n)]"
+          style={{ ["--n" as never]: NEON }}
+        >
+          💬 Balas
+        </button>
+
+        {open && (
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+              placeholder={`Balas @${comment.handle}...`}
+              className="flex-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-xs placeholder:text-white/30 focus:border-[color:var(--n)] focus:outline-none"
+              style={{ ["--n" as never]: NEON }}
+              maxLength={220}
+            />
+            <button
+              type="button"
+              onClick={send}
+              className="rounded-md px-2 py-1 text-[10px] font-black text-black"
+              style={{ background: NEON }}
+            >
+              Kirim
+            </button>
+          </div>
+        )}
+
+        {comment.replies.length > 0 && (
+          <ul className="mt-2 space-y-2 border-l border-white/10 pl-3">
+            {comment.replies.map((r) => (
+              <li key={r.id} className="flex items-start gap-2 animate-fade-in">
+                {r.avatar ? (
+                  <img
+                    src={r.avatar}
+                    alt={r.name}
+                    loading="lazy"
+                    className="h-6 w-6 shrink-0 rounded-full border border-white/10 object-cover"
+                    style={{ background: r.color }}
+                  />
+                ) : (
+                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[9px] font-black text-black" style={{ background: r.color }}>
+                    {r.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-1 text-[10px]">
+                    <span className="font-bold text-white/90">{r.name}</span>
+                    {r.verified && <VerifiedCheck size={10} />}
+                    <span className="text-white/40">@{r.handle} · {r.ago}</span>
+                    {r.isUser && <span className="rounded-sm bg-white/10 px-1 text-[8px] uppercase tracking-widest text-white/60">kamu</span>}
+                  </div>
+                  <p className="break-words text-[11px] text-white/80">{r.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {/* silence unused vars in this component */}
+        <span className="hidden">{meName}{meHandle}{meColor}{meAvatar}{meVerified ? "1" : ""}</span>
+      </div>
+    </li>
+  );
+}
+
 function CommunityFeed({
-  posts, onLike, onRepost, onCreate,
+  posts, onLike, onRepost, onCreate, onReply, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   posts: CommunityPost[];
   onLike: (id: string) => void;
   onRepost: (id: string) => void;
   onCreate: () => void;
+  onReply: (postId: string, commentId: string, text: string) => void;
+  meName: string;
+  meHandle: string;
+  meColor: string;
+  meAvatar?: string;
+  meVerified?: boolean;
 }) {
   const [, force] = useState(0);
   useEffect(() => {
@@ -904,9 +1113,11 @@ function CommunityFeed({
                   ))}
                 </p>
 
-                <div className="mt-2 overflow-hidden rounded-xl border border-white/10">
-                  <img src={p.image} alt="post" className="w-full object-cover" loading="lazy" />
-                </div>
+                {p.image && (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-white/10">
+                    <img src={p.image} alt="post" className="w-full object-cover" loading="lazy" />
+                  </div>
+                )}
 
                 <div className="mt-2 flex items-center gap-4 text-[11px] text-white/60">
                   <button onClick={() => onLike(p.id)} className={`flex items-center gap-1 hover:text-pink-400 ${p.liked ? "text-pink-400" : ""}`}>
@@ -928,20 +1139,19 @@ function CommunityFeed({
                 </div>
 
                 {p.comments.length > 0 && (
-                  <ul className="mt-3 space-y-2 border-t border-white/5 pt-3">
+                  <ul className="mt-3 space-y-3 border-t border-white/5 pt-3">
                     {p.comments.slice(0, 30).map((c) => (
-                      <li key={c.id} className="flex items-start gap-2 animate-fade-in">
-                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-black text-black" style={{ background: c.color }}>
-                          {c.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline gap-1 text-[11px]">
-                            <span className="font-bold text-white/90">{c.name}</span>
-                            <span className="text-white/40">@{c.handle} · {c.ago}</span>
-                          </div>
-                          <p className="break-words text-xs text-white/80">{c.text}</p>
-                        </div>
-                      </li>
+                      <CommentItem
+                        key={c.id}
+                        postId={p.id}
+                        comment={c}
+                        onReply={onReply}
+                        meName={meName}
+                        meHandle={meHandle}
+                        meColor={meColor}
+                        meAvatar={meAvatar}
+                        meVerified={meVerified}
+                      />
                     ))}
                   </ul>
                 )}
@@ -962,6 +1172,7 @@ function CommunityFeed({
     </>
   );
 }
+
 
 function Index() {
   const [session, setSession] = useState<Session | null>(null);
@@ -1203,18 +1414,64 @@ function App({ session }: { session: Session }) {
         name: bot.name,
         handle: bot.handle,
         color: bot.color,
+        avatar: bot.avatar,
         text,
         ago: `${cticks}d`,
+        replies: [],
       };
       setPosts((ps) => ps.map((p) => p.id === post.id ? { ...p, comments: [comment, ...p.comments] } : p));
       if (cticks > 40) window.clearInterval(commentId);
     }, 450);
   };
 
+
   const toggleLike = (id: string) => setPosts((ps) => ps.map((p) => p.id === id
     ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p));
   const toggleRepost = (id: string) => setPosts((ps) => ps.map((p) => p.id === id
     ? { ...p, reposted: !p.reposted, reposts: p.reposts + (p.reposted ? -1 : 1) } : p));
+
+  const replyToComment = (postId: string, commentId: string, text: string) => {
+    const myReply: BotReply = {
+      id: randomId(),
+      name: authorName,
+      handle: authorHandle,
+      color: meColor,
+      avatar: "",
+      text,
+      ago: "0d",
+      isUser: true,
+      verified: authorVerified,
+    };
+    setPosts((ps) => ps.map((p) => p.id !== postId ? p : {
+      ...p,
+      comments: p.comments.map((c) => c.id !== commentId ? c : { ...c, replies: [...c.replies, myReply] }),
+    }));
+
+    // Bot balas balik 1-2 detik kemudian
+    const delay = 900 + Math.floor(Math.random() * 1200);
+    window.setTimeout(() => {
+      setPosts((ps) => ps.map((p) => {
+        if (p.id !== postId) return p;
+        return {
+          ...p,
+          comments: p.comments.map((c) => {
+            if (c.id !== commentId) return c;
+            const botReply: BotReply = {
+              id: randomId(),
+              name: c.name,
+              handle: c.handle,
+              color: c.color,
+              avatar: c.avatar,
+              text: pickBotReplyText(text),
+              ago: "baru saja",
+            };
+            return { ...c, replies: [...c.replies, botReply] };
+          }),
+        };
+      }));
+    }, delay);
+  };
+
 
   const progress = dur ? (time / dur) * 100 : 0;
   const meColor = me?.avatar_color ?? NEON;
@@ -1499,7 +1756,13 @@ function App({ session }: { session: Session }) {
             onLike={toggleLike}
             onRepost={toggleRepost}
             onCreate={() => setShowCreate(true)}
+            onReply={replyToComment}
+            meName={authorName}
+            meHandle={authorHandle}
+            meColor={meColor}
+            meVerified={authorVerified}
           />
+
         </main>
       )}
 
