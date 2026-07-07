@@ -1430,6 +1430,49 @@ function App({ session }: { session: Session }) {
   const toggleRepost = (id: string) => setPosts((ps) => ps.map((p) => p.id === id
     ? { ...p, reposted: !p.reposted, reposts: p.reposts + (p.reposted ? -1 : 1) } : p));
 
+  const replyToComment = (postId: string, commentId: string, text: string) => {
+    const myReply: BotReply = {
+      id: randomId(),
+      name: authorName,
+      handle: authorHandle,
+      color: meColor,
+      avatar: "",
+      text,
+      ago: "0d",
+      isUser: true,
+      verified: authorVerified,
+    };
+    setPosts((ps) => ps.map((p) => p.id !== postId ? p : {
+      ...p,
+      comments: p.comments.map((c) => c.id !== commentId ? c : { ...c, replies: [...c.replies, myReply] }),
+    }));
+
+    // Bot balas balik 1-2 detik kemudian
+    const delay = 900 + Math.floor(Math.random() * 1200);
+    window.setTimeout(() => {
+      setPosts((ps) => ps.map((p) => {
+        if (p.id !== postId) return p;
+        return {
+          ...p,
+          comments: p.comments.map((c) => {
+            if (c.id !== commentId) return c;
+            const botReply: BotReply = {
+              id: randomId(),
+              name: c.name,
+              handle: c.handle,
+              color: c.color,
+              avatar: c.avatar,
+              text: pickBotReplyText(text),
+              ago: "baru saja",
+            };
+            return { ...c, replies: [...c.replies, botReply] };
+          }),
+        };
+      }));
+    }, delay);
+  };
+
+
   const progress = dur ? (time / dur) * 100 : 0;
   const meColor = me?.avatar_color ?? NEON;
   const meInitial = (me?.display_name || me?.username || "?").charAt(0).toUpperCase();
