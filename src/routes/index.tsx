@@ -946,13 +946,124 @@ function CreatePostModal({
   );
 }
 
+function CommentItem({
+  postId, comment, onReply, meName, meHandle, meColor, meAvatar, meVerified,
+}: {
+  postId: string;
+  comment: BotComment;
+  onReply: (postId: string, commentId: string, text: string) => void;
+  meName: string;
+  meHandle: string;
+  meColor: string;
+  meAvatar?: string;
+  meVerified?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const send = () => {
+    const t = text.trim();
+    if (!t) return;
+    onReply(postId, comment.id, t);
+    setText("");
+    setOpen(false);
+  };
+  return (
+    <li className="flex items-start gap-2 animate-fade-in">
+      <img
+        src={comment.avatar}
+        alt={comment.name}
+        loading="lazy"
+        className="h-8 w-8 shrink-0 rounded-full border border-white/10 bg-white/5 object-cover"
+        style={{ background: comment.color }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-1 text-[11px]">
+          <span className="font-bold text-white/90">{comment.name}</span>
+          <span className="text-white/40">@{comment.handle} · {comment.ago}</span>
+        </div>
+        <p className="break-words text-xs text-white/80">{comment.text}</p>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="mt-1 text-[10px] uppercase tracking-widest text-white/40 hover:text-[color:var(--n)]"
+          style={{ ["--n" as never]: NEON }}
+        >
+          💬 Balas
+        </button>
+
+        {open && (
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+              placeholder={`Balas @${comment.handle}...`}
+              className="flex-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-xs placeholder:text-white/30 focus:border-[color:var(--n)] focus:outline-none"
+              style={{ ["--n" as never]: NEON }}
+              maxLength={220}
+            />
+            <button
+              type="button"
+              onClick={send}
+              className="rounded-md px-2 py-1 text-[10px] font-black text-black"
+              style={{ background: NEON }}
+            >
+              Kirim
+            </button>
+          </div>
+        )}
+
+        {comment.replies.length > 0 && (
+          <ul className="mt-2 space-y-2 border-l border-white/10 pl-3">
+            {comment.replies.map((r) => (
+              <li key={r.id} className="flex items-start gap-2 animate-fade-in">
+                {r.avatar ? (
+                  <img
+                    src={r.avatar}
+                    alt={r.name}
+                    loading="lazy"
+                    className="h-6 w-6 shrink-0 rounded-full border border-white/10 object-cover"
+                    style={{ background: r.color }}
+                  />
+                ) : (
+                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[9px] font-black text-black" style={{ background: r.color }}>
+                    {r.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-1 text-[10px]">
+                    <span className="font-bold text-white/90">{r.name}</span>
+                    {r.verified && <VerifiedCheck size={10} />}
+                    <span className="text-white/40">@{r.handle} · {r.ago}</span>
+                    {r.isUser && <span className="rounded-sm bg-white/10 px-1 text-[8px] uppercase tracking-widest text-white/60">kamu</span>}
+                  </div>
+                  <p className="break-words text-[11px] text-white/80">{r.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {/* silence unused vars in this component */}
+        <span className="hidden">{meName}{meHandle}{meColor}{meAvatar}{meVerified ? "1" : ""}</span>
+      </div>
+    </li>
+  );
+}
+
 function CommunityFeed({
-  posts, onLike, onRepost, onCreate,
+  posts, onLike, onRepost, onCreate, onReply, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   posts: CommunityPost[];
   onLike: (id: string) => void;
   onRepost: (id: string) => void;
   onCreate: () => void;
+  onReply: (postId: string, commentId: string, text: string) => void;
+  meName: string;
+  meHandle: string;
+  meColor: string;
+  meAvatar?: string;
+  meVerified?: boolean;
 }) {
   const [, force] = useState(0);
   useEffect(() => {
@@ -1002,9 +1113,11 @@ function CommunityFeed({
                   ))}
                 </p>
 
-                <div className="mt-2 overflow-hidden rounded-xl border border-white/10">
-                  <img src={p.image} alt="post" className="w-full object-cover" loading="lazy" />
-                </div>
+                {p.image && (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-white/10">
+                    <img src={p.image} alt="post" className="w-full object-cover" loading="lazy" />
+                  </div>
+                )}
 
                 <div className="mt-2 flex items-center gap-4 text-[11px] text-white/60">
                   <button onClick={() => onLike(p.id)} className={`flex items-center gap-1 hover:text-pink-400 ${p.liked ? "text-pink-400" : ""}`}>
@@ -1026,20 +1139,19 @@ function CommunityFeed({
                 </div>
 
                 {p.comments.length > 0 && (
-                  <ul className="mt-3 space-y-2 border-t border-white/5 pt-3">
+                  <ul className="mt-3 space-y-3 border-t border-white/5 pt-3">
                     {p.comments.slice(0, 30).map((c) => (
-                      <li key={c.id} className="flex items-start gap-2 animate-fade-in">
-                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-black text-black" style={{ background: c.color }}>
-                          {c.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline gap-1 text-[11px]">
-                            <span className="font-bold text-white/90">{c.name}</span>
-                            <span className="text-white/40">@{c.handle} · {c.ago}</span>
-                          </div>
-                          <p className="break-words text-xs text-white/80">{c.text}</p>
-                        </div>
-                      </li>
+                      <CommentItem
+                        key={c.id}
+                        postId={p.id}
+                        comment={c}
+                        onReply={onReply}
+                        meName={meName}
+                        meHandle={meHandle}
+                        meColor={meColor}
+                        meAvatar={meAvatar}
+                        meVerified={meVerified}
+                      />
                     ))}
                   </ul>
                 )}
@@ -1060,6 +1172,7 @@ function CommunityFeed({
     </>
   );
 }
+
 
 function Index() {
   const [session, setSession] = useState<Session | null>(null);
