@@ -624,7 +624,27 @@ function ProfileSheet({
 
 // ---------------- MAIN ----------------
 // ---------------- COMMUNITY (X ZONE) ----------------
-type BotComment = { id: string; name: string; handle: string; color: string; text: string; ago: string };
+type BotReply = {
+  id: string;
+  name: string;
+  handle: string;
+  color: string;
+  avatar: string;
+  text: string;
+  ago: string;
+  isUser?: boolean;
+  verified?: boolean;
+};
+type BotComment = {
+  id: string;
+  name: string;
+  handle: string;
+  color: string;
+  avatar: string;
+  text: string;
+  ago: string;
+  replies: BotReply[];
+};
 type CommunityPost = {
   id: string;
   author: string;
@@ -644,26 +664,104 @@ type CommunityPost = {
   reposted?: boolean;
 };
 
-const BOT_POOL: { name: string; handle: string; color: string }[] = [
-  { name: "Riko Wibu", handle: "rikowbu", color: "#ff6b9d" },
-  { name: "Sesepuh DC2", handle: "dc2_legend", color: "#39FF7A" },
-  { name: "Nadia_98", handle: "nadia98x", color: "#f5c518" },
-  { name: "GamerBocil", handle: "boxfruit_main", color: "#00b3ff" },
-  { name: "Fahmi Anim", handle: "fahmi.anims", color: "#ff8c42" },
-  { name: "Yura", handle: "yuraaa_", color: "#c084fc" },
-  { name: "AnimeLord", handle: "lord.anime", color: "#ef4444" },
-  { name: "Bocah FYP", handle: "fyp.bocah", color: "#22d3ee" },
-  { name: "Kentang", handle: "kentang.crispy", color: "#facc15" },
-  { name: "Vira", handle: "vira.ntt", color: "#ec4899" },
-  { name: "Rangga", handle: "rangga.op", color: "#84cc16" },
-  { name: "Miko", handle: "miko_donghua", color: "#3b82f6" },
-  { name: "Elsa", handle: "elsa.riil", color: "#fb7185" },
-  { name: "Bang Jul", handle: "juli.gasken", color: "#a3e635" },
-  { name: "Dinda", handle: "dindaaa_x", color: "#e879f9" },
-  { name: "Reza", handle: "rezaa.op", color: "#fbbf24" },
-  { name: "Tio", handle: "tio.gg", color: "#38bdf8" },
-  { name: "Sinta", handle: "sinta.wibu", color: "#f472b6" },
+function botAvatar(handle: string, style = "adventurer") {
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(handle)}&backgroundType=gradientLinear`;
+}
+
+const BOT_POOL: { name: string; handle: string; color: string; avatar: string }[] = [
+  { name: "Riko Wibu", handle: "rikowbu", color: "#ff6b9d", avatar: botAvatar("rikowbu", "adventurer") },
+  { name: "Sesepuh DC2", handle: "dc2_legend", color: "#39FF7A", avatar: botAvatar("dc2_legend", "lorelei") },
+  { name: "Nadia_98", handle: "nadia98x", color: "#f5c518", avatar: botAvatar("nadia98x", "avataaars") },
+  { name: "GamerBocil", handle: "boxfruit_main", color: "#00b3ff", avatar: botAvatar("boxfruit_main", "bottts") },
+  { name: "Fahmi Anim", handle: "fahmi.anims", color: "#ff8c42", avatar: botAvatar("fahmi.anims", "adventurer") },
+  { name: "Yura", handle: "yuraaa_", color: "#c084fc", avatar: botAvatar("yuraaa_", "lorelei") },
+  { name: "AnimeLord", handle: "lord.anime", color: "#ef4444", avatar: botAvatar("lord.anime", "personas") },
+  { name: "Bocah FYP", handle: "fyp.bocah", color: "#22d3ee", avatar: botAvatar("fyp.bocah", "avataaars") },
+  { name: "Kentang", handle: "kentang.crispy", color: "#facc15", avatar: botAvatar("kentang.crispy", "bottts") },
+  { name: "Vira", handle: "vira.ntt", color: "#ec4899", avatar: botAvatar("vira.ntt", "lorelei") },
+  { name: "Rangga", handle: "rangga.op", color: "#84cc16", avatar: botAvatar("rangga.op", "adventurer") },
+  { name: "Miko", handle: "miko_donghua", color: "#3b82f6", avatar: botAvatar("miko_donghua", "personas") },
+  { name: "Elsa", handle: "elsa.riil", color: "#fb7185", avatar: botAvatar("elsa.riil", "lorelei") },
+  { name: "Bang Jul", handle: "juli.gasken", color: "#a3e635", avatar: botAvatar("juli.gasken", "adventurer") },
+  { name: "Dinda", handle: "dindaaa_x", color: "#e879f9", avatar: botAvatar("dindaaa_x", "avataaars") },
+  { name: "Reza", handle: "rezaa.op", color: "#fbbf24", avatar: botAvatar("rezaa.op", "personas") },
+  { name: "Tio", handle: "tio.gg", color: "#38bdf8", avatar: botAvatar("tio.gg", "bottts") },
+  { name: "Sinta", handle: "sinta.wibu", color: "#f472b6", avatar: botAvatar("sinta.wibu", "lorelei") },
 ];
+
+// Keyword-based bot reply pools
+const REPLY_POOLS: { keys: RegExp; lines: string[] }[] = [
+  {
+    keys: /(bagus|keren|smooth|animasi|animation|epic|mantap|gokil|sick|kece|aesthetic)/i,
+    lines: [
+      "Emang boleh se-smooth itu animasinya? Kelazzz abangkuh! 🔥",
+      "Riil cuy, gua tonton berulang-ulang tetep merinding 😭",
+      "Frame by frame-nya juara sih, respect buat animatornya 👑",
+      "Fix ini kualitas donghua lokal udh naik kelas 🗿",
+    ],
+  },
+  {
+    keys: /(game|mabar|blox|fruit|ff|free ?fire|ml|mobile ?legend|valo|pubg)/i,
+    lines: [
+      "Bjirrr gas mabar Blox Fruits bang, drop nick lu sini wkwk 🦖",
+      "Room gua masih kosong nih, gaskeun mabar sambil nungguin eps 6 😤",
+      "Nickname gua: dfkit_op, add ya bang! 🎮",
+    ],
+  },
+  {
+    keys: /\?|kapan|siapa|kok|kenapa|gimana|dimana|apakah/i,
+    lines: [
+      "Wah kalau itu cuma bang Sion yang tahu plot twist-nya, kita tungguin aja eps 6 rilis ☝️😭",
+      "Bentar bentar itu masih rahasia sih, spoiler alert 🤫",
+      "Gua juga penasaran anjay, mari kita war di komen sampe dijawab 📢",
+    ],
+  },
+  {
+    keys: /(halo|hai|p|assalam|hello|hi)\b/i,
+    lines: [
+      "Halooo juga cuy, salken dari fandom Akar Terlarang 👋",
+      "Wih ada orang baru, welcome to Zone Community 🔥",
+    ],
+  },
+  {
+    keys: /(setuju|bener|betul|riil|real|fakta|fix)/i,
+    lines: [
+      "FIX! Sepemikiran kita bang, riil no fek 🤝",
+      "Bener banget, gua satu suara sama lu cok 🗿",
+    ],
+  },
+  {
+    keys: /(jelek|hate|garbage|sampah|bosen|buruk)/i,
+    lines: [
+      "Yah sabar bang, kalau gak suka ya scroll aja jangan war 😹",
+      "Selera orang beda-beda sih, tapi menurut gua sih worth ditonton 🙏",
+    ],
+  },
+  {
+    keys: /(kapan.*rilis|eps? ?6|episode ?6|akar|terlarang)/i,
+    lines: [
+      "Sabar bang, kabarnya sih eps 6 lagi finishing, siap-siap notif on! 🔔",
+      "Katanya bang Sion lagi polish frame-nya biar makin epic 🎬",
+    ],
+  },
+];
+
+const DEFAULT_REPLIES = [
+  "Wkwkwk bener juga sih bang 🗿",
+  "Setuju cuy, mari kita ramein terus komunitasnya 🔥",
+  "Anjay komennya relate parah 😹",
+  "Gasss keep it up, satu suara sama abangku 🤝",
+  "Menyala komunitas Zone-nya menyala 🔥🔥",
+  "Njir lu ngomong gitu bikin gua ngakak parah wkwk",
+];
+
+function pickBotReplyText(userText: string): string {
+  for (const pool of REPLY_POOLS) {
+    if (pool.keys.test(userText)) return pool.lines[Math.floor(Math.random() * pool.lines.length)];
+  }
+  return DEFAULT_REPLIES[Math.floor(Math.random() * DEFAULT_REPLIES.length)];
+}
+
 
 const COMMENT_POOL: string[] = [
   "Menyala abangkuh! 🔥 Gak sabar nunggu eps 6 rilis!",
