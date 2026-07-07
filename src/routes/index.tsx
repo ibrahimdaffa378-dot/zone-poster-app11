@@ -1301,13 +1301,16 @@ function App({ session }: { session: Session }) {
         name: bot.name,
         handle: bot.handle,
         color: bot.color,
+        avatar: bot.avatar,
         text,
         ago: `${cticks}d`,
+        replies: [],
       };
       setPosts((ps) => ps.map((p) => p.id === post.id ? { ...p, comments: [comment, ...p.comments] } : p));
       if (cticks > 40) window.clearInterval(commentId);
     }, 450);
   };
+
 
   const toggleLike = (id: string) => setPosts((ps) => ps.map((p) => p.id === id
     ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p));
