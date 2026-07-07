@@ -1756,7 +1756,13 @@ function App({ session }: { session: Session }) {
             onLike={toggleLike}
             onRepost={toggleRepost}
             onCreate={() => setShowCreate(true)}
+            onReply={replyToComment}
+            meName={authorName}
+            meHandle={authorHandle}
+            meColor={meColor}
+            meVerified={authorVerified}
           />
+
         </main>
       )}
 
