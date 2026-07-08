@@ -634,6 +634,7 @@ type BotReply = {
   ago: string;
   isUser?: boolean;
   verified?: boolean;
+  typing?: boolean;
 };
 type BotComment = {
   id: string;
@@ -692,57 +693,71 @@ const BOT_POOL: { name: string; handle: string; color: string; avatar: string }[
 
 // Keyword-based bot reply pools
 const REPLY_POOLS: { keys: RegExp; lines: string[] }[] = [
+  // Pujian / scene keren
   {
-    keys: /(bagus|keren|smooth|animasi|animation|epic|mantap|gokil|sick|kece|aesthetic)/i,
+    keys: /(bagus|keren|smooth|animasi|animation|epic|mantap|gokil|sick|kece|aesthetic|klimaks|scene|masterpiece|goat|top ?tier|kelas)/i,
     lines: [
+      "Bisa aja lu bang, tapi emang sih scene itu klimaks banget! 😭",
       "Emang boleh se-smooth itu animasinya? Kelazzz abangkuh! 🔥",
       "Riil cuy, gua tonton berulang-ulang tetep merinding 😭",
       "Frame by frame-nya juara sih, respect buat animatornya 👑",
       "Fix ini kualitas donghua lokal udh naik kelas 🗿",
+      "Njir lu tau aja bagian ter-epic-nya, satu selera kita bang 🤝",
     ],
   },
+  // Tanya update / kapan / eps 6
   {
-    keys: /(game|mabar|blox|fruit|ff|free ?fire|ml|mobile ?legend|valo|pubg)/i,
+    keys: /(update|kapan|rilis|release|next|lanjut|eps? ?6|episode ?6|kelanjutan|nunggu|tunggu)/i,
     lines: [
-      "Bjirrr gas mabar Blox Fruits bang, drop nick lu sini wkwk 🦖",
-      "Room gua masih kosong nih, gaskeun mabar sambil nungguin eps 6 😤",
-      "Nickname gua: dfkit_op, add ya bang! 🎮",
+      "Tunggu tanggal mainnya cuy, pantengin terus notif biar gak ketinggalan eps 6.",
+      "Sabar bang, kabarnya sih eps 6 lagi finishing, siap-siap notif ON! 🔔",
+      "Katanya bang Sion lagi polish frame-nya biar makin epic 🎬 tenang aja pasti rilis kok.",
+      "Info paling update sih pantengin story bang Sion aja, biasanya bocor duluan di situ 👀",
     ],
   },
+  // Bercanda / ngajak main
   {
-    keys: /\?|kapan|siapa|kok|kenapa|gimana|dimana|apakah/i,
+    keys: /(wkwk|haha|hehe|lol|lmao|ngakak|becanda|bercanda|guyon|mabar|main|game|blox|fruit|ff|free ?fire|ml|mobile ?legend|valo|pubg|nge-?trol|troll)/i,
+    lines: [
+      "Wkwk bisa aja lu, btw mabar gas? 🎮",
+      "Bjirrr ngakak gua, gas mabar Blox Fruits bang, drop nick lu sini 🦖",
+      "Wkwkwk lu emang paling receh se-timeline, sini mabar nunggu eps 6 😹",
+      "Room mabar gua kosong nih, gaskeun sambil war di komen 😤",
+    ],
+  },
+  // Pertanyaan generic (siapa/kok/kenapa/gimana/dimana)
+  {
+    keys: /\?|siapa|kok |kenapa|gimana|dimana|apakah/i,
     lines: [
       "Wah kalau itu cuma bang Sion yang tahu plot twist-nya, kita tungguin aja eps 6 rilis ☝️😭",
       "Bentar bentar itu masih rahasia sih, spoiler alert 🤫",
       "Gua juga penasaran anjay, mari kita war di komen sampe dijawab 📢",
     ],
   },
+  // Salam
   {
-    keys: /(halo|hai|p|assalam|hello|hi)\b/i,
+    keys: /^\s*(halo|hai|p|assalam|hello|hi|bro|bang|cuy)\s*!?\s*$/i,
     lines: [
       "Halooo juga cuy, salken dari fandom Akar Terlarang 👋",
       "Wih ada orang baru, welcome to Zone Community 🔥",
+      "Yo bang, gas ngobrol di sini rame-rame 🤙",
     ],
   },
+  // Setuju
   {
-    keys: /(setuju|bener|betul|riil|real|fakta|fix)/i,
+    keys: /(setuju|bener|betul|riil|real|fakta|fix|sepakat|agree)/i,
     lines: [
       "FIX! Sepemikiran kita bang, riil no fek 🤝",
       "Bener banget, gua satu suara sama lu cok 🗿",
+      "Setuju banget, ini opini paling waras di kolom komen 👑",
     ],
   },
+  // Negatif
   {
-    keys: /(jelek|hate|garbage|sampah|bosen|buruk)/i,
+    keys: /(jelek|hate|garbage|sampah|bosen|buruk|ngga suka|gak suka)/i,
     lines: [
       "Yah sabar bang, kalau gak suka ya scroll aja jangan war 😹",
       "Selera orang beda-beda sih, tapi menurut gua sih worth ditonton 🙏",
-    ],
-  },
-  {
-    keys: /(kapan.*rilis|eps? ?6|episode ?6|akar|terlarang)/i,
-    lines: [
-      "Sabar bang, kabarnya sih eps 6 lagi finishing, siap-siap notif on! 🔔",
-      "Katanya bang Sion lagi polish frame-nya biar makin epic 🎬",
     ],
   },
 ];
@@ -859,7 +874,27 @@ const DEFAULT_REPLIES = [
   "Njir lu ngomong gitu bikin gua ngakak parah wkwk",
 ];
 
+const SHORT_REPLIES = [
+  "Gas lah! 🔥",
+  "Setuju banget.",
+  "Ngegasss 🤝",
+  "Fix cuy 🗿",
+  "Sat set bang!",
+  "Mantul 🔥",
+];
+
+function isShortOrEmoji(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length <= 4) return true;
+  // Mostly emoji / non-word chars
+  const wordChars = trimmed.replace(/[\s\p{Emoji_Presentation}\p{Extended_Pictographic}\p{P}\p{S}]/gu, "");
+  return wordChars.length <= 3;
+}
+
 function pickBotReplyText(userText: string): string {
+  if (isShortOrEmoji(userText)) {
+    return SHORT_REPLIES[Math.floor(Math.random() * SHORT_REPLIES.length)];
+  }
   for (const pool of REPLY_POOLS) {
     if (pool.keys.test(userText)) return pool.lines[Math.floor(Math.random() * pool.lines.length)];
   }
@@ -1142,7 +1177,18 @@ function CommentItem({
                     <span className="text-white/40">@{r.handle} · {r.ago}</span>
                     {r.isUser && <span className="rounded-sm bg-white/10 px-1 text-[8px] uppercase tracking-widest text-white/60">kamu</span>}
                   </div>
-                  <p className="break-words text-[11px] text-white/80">{r.text}</p>
+                  <p className={`break-words text-[11px] ${r.typing ? "italic text-white/40" : "text-white/80"}`}>
+                    {r.typing ? (
+                      <span className="inline-flex items-center gap-1">
+                        {r.text}
+                        <span className="inline-flex gap-0.5">
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-white/50" style={{ animationDelay: "0ms" }} />
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-white/50" style={{ animationDelay: "120ms" }} />
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-white/50" style={{ animationDelay: "240ms" }} />
+                        </span>
+                      </span>
+                    ) : r.text}
+                  </p>
                 </div>
               </li>
             ))}
@@ -1555,8 +1601,31 @@ function App({ session }: { session: Session }) {
       comments: p.comments.map((c) => c.id !== commentId ? c : { ...c, replies: [...c.replies, myReply] }),
     }));
 
-    // Bot balas balik 1-2 detik kemudian
-    const delay = 900 + Math.floor(Math.random() * 1200);
+    // Tampilkan indikator "Bot sedang mengetik..." dulu biar terasa natural
+    const typingId = randomId();
+    setPosts((ps) => ps.map((p) => {
+      if (p.id !== postId) return p;
+      return {
+        ...p,
+        comments: p.comments.map((c) => {
+          if (c.id !== commentId) return c;
+          const typingReply: BotReply = {
+            id: typingId,
+            name: c.name,
+            handle: c.handle,
+            color: c.color,
+            avatar: c.avatar,
+            text: "Bot sedang mengetik",
+            ago: "baru saja",
+            typing: true,
+          };
+          return { ...c, replies: [...c.replies, typingReply] };
+        }),
+      };
+    }));
+
+    // Bot balas balik 1-2 detik kemudian, replace placeholder mengetik
+    const delay = 1000 + Math.floor(Math.random() * 1000);
     window.setTimeout(() => {
       setPosts((ps) => ps.map((p) => {
         if (p.id !== postId) return p;
@@ -1573,7 +1642,10 @@ function App({ session }: { session: Session }) {
               text: pickBotReplyText(text),
               ago: "baru saja",
             };
-            return { ...c, replies: [...c.replies, botReply] };
+            return {
+              ...c,
+              replies: [...c.replies.filter((r) => r.id !== typingId), botReply],
+            };
           }),
         };
       }));
