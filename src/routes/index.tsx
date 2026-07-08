@@ -1333,7 +1333,7 @@ function App({ session }: { session: Session }) {
   const [alias, setAlias] = useState<string>("");
   const [showWelcome, setShowWelcome] = useState(true);
   const [activeTab, setActiveTab] = useState<"watch" | "community">("watch");
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [posts, setPosts] = useState<CommunityPost[]>(() => makeSeedPosts());
   const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
