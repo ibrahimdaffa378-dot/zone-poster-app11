@@ -1094,9 +1094,13 @@ function CommunityFeed({
         {posts.map((p) => (
           <li key={p.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
             <div className="flex items-start gap-2">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-black text-black" style={{ background: p.color }}>
-                {p.author.charAt(0).toUpperCase()}
-              </div>
+              {p.avatar ? (
+                <img src={p.avatar} alt={p.author} className="h-10 w-10 shrink-0 rounded-full object-cover" style={{ background: p.color }} loading="lazy" />
+              ) : (
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-black text-black" style={{ background: p.color }}>
+                  {p.author.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1 text-xs">
                   <span className="font-bold text-white/95">{p.author}</span>
