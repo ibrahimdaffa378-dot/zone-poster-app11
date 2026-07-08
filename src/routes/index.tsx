@@ -1143,7 +1143,18 @@ function CommentItem({
                     <span className="text-white/40">@{r.handle} · {r.ago}</span>
                     {r.isUser && <span className="rounded-sm bg-white/10 px-1 text-[8px] uppercase tracking-widest text-white/60">kamu</span>}
                   </div>
-                  <p className="break-words text-[11px] text-white/80">{r.text}</p>
+                  <p className={`break-words text-[11px] ${r.typing ? "italic text-white/40" : "text-white/80"}`}>
+                    {r.typing ? (
+                      <span className="inline-flex items-center gap-1">
+                        {r.text}
+                        <span className="inline-flex gap-0.5">
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-white/50" style={{ animationDelay: "0ms" }} />
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-white/50" style={{ animationDelay: "120ms" }} />
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-white/50" style={{ animationDelay: "240ms" }} />
+                        </span>
+                      </span>
+                    ) : r.text}
+                  </p>
                 </div>
               </li>
             ))}
