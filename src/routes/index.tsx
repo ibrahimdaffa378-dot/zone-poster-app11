@@ -1601,8 +1601,31 @@ function App({ session }: { session: Session }) {
       comments: p.comments.map((c) => c.id !== commentId ? c : { ...c, replies: [...c.replies, myReply] }),
     }));
 
-    // Bot balas balik 1-2 detik kemudian
-    const delay = 900 + Math.floor(Math.random() * 1200);
+    // Tampilkan indikator "Bot sedang mengetik..." dulu biar terasa natural
+    const typingId = randomId();
+    setPosts((ps) => ps.map((p) => {
+      if (p.id !== postId) return p;
+      return {
+        ...p,
+        comments: p.comments.map((c) => {
+          if (c.id !== commentId) return c;
+          const typingReply: BotReply = {
+            id: typingId,
+            name: c.name,
+            handle: c.handle,
+            color: c.color,
+            avatar: c.avatar,
+            text: "Bot sedang mengetik",
+            ago: "baru saja",
+            typing: true,
+          };
+          return { ...c, replies: [...c.replies, typingReply] };
+        }),
+      };
+    }));
+
+    // Bot balas balik 1-2 detik kemudian, replace placeholder mengetik
+    const delay = 1000 + Math.floor(Math.random() * 1000);
     window.setTimeout(() => {
       setPosts((ps) => ps.map((p) => {
         if (p.id !== postId) return p;
@@ -1619,7 +1642,10 @@ function App({ session }: { session: Session }) {
               text: pickBotReplyText(text),
               ago: "baru saja",
             };
-            return { ...c, replies: [...c.replies, botReply] };
+            return {
+              ...c,
+              replies: [...c.replies.filter((r) => r.id !== typingId), botReply],
+            };
           }),
         };
       }));
