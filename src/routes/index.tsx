@@ -634,6 +634,7 @@ type BotReply = {
   ago: string;
   isUser?: boolean;
   verified?: boolean;
+  typing?: boolean;
 };
 type BotComment = {
   id: string;
