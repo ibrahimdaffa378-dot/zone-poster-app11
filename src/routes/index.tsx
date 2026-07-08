@@ -747,6 +747,109 @@ const REPLY_POOLS: { keys: RegExp; lines: string[] }[] = [
   },
 ];
 
+// Seed feed with standalone bot posts so timeline never feels empty
+function makeSeedPosts(): CommunityPost[] {
+  const now = Date.now();
+  const mkComments = (arr: { h: string; t: string }[]): BotComment[] =>
+    arr.map((c, i) => {
+      const bot = BOT_POOL.find((b) => b.handle === c.h) ?? BOT_POOL[i % BOT_POOL.length];
+      return {
+        id: `sc_${c.h}_${i}_${now}`,
+        name: bot.name,
+        handle: bot.handle,
+        color: bot.color,
+        avatar: bot.avatar,
+        text: c.t,
+        ago: `${i + 1}m`,
+        replies: [],
+      };
+    });
+  return [
+    {
+      id: `seed_1_${now}`,
+      author: "Fahmi Anim",
+      handle: "fahmi.anims",
+      color: "#ff8c42",
+      avatar: botAvatar("fahmi.anims", "adventurer"),
+      caption:
+        "Gak sabar banget nungguin Episode 6 Akar Terlarang rilis riil! Teaser-nya bang Sion udah kerasa kuadrat epic-nya 🔥",
+      hashtags: ["HeavenDefyingDragonforce", "ZoneCommunity"],
+      mentions: ["Sion_dfkit"],
+      image: "",
+      createdAt: now - 2 * 60 * 60 * 1000,
+      likes: 1284,
+      reposts: 217,
+      views: 15420,
+      comments: mkComments([
+        { h: "rikowbu", t: "Fix bang, teaser doang udah bikin merinding 😭🔥" },
+        { h: "dc2_legend", t: "Sepuh emang gak pernah bohong, siap-siap notif ON 🔔" },
+      ]),
+    },
+    {
+      id: `seed_2_${now}`,
+      author: "GamerBocil",
+      handle: "boxfruit_main",
+      color: "#00b3ff",
+      avatar: botAvatar("boxfruit_main", "bottts"),
+      caption:
+        "Sambil nunggu eps 6 premier, info mabar Blox Fruits sea 2 atau sea 3 dong cuy, sepi banget nih wkwk 🦖",
+      hashtags: ["BloxFruits", "Mabar"],
+      mentions: [],
+      image: "",
+      createdAt: now - 5 * 60 * 60 * 1000,
+      likes: 462,
+      reposts: 58,
+      views: 6120,
+      comments: mkComments([
+        { h: "tio.gg", t: "Room gua kosong bang, drop nick sini gasss 🎮" },
+        { h: "rangga.op", t: "Sea 3 lah bang, farming buah mythical 🗿" },
+      ]),
+    },
+    {
+      id: `seed_3_${now}`,
+      author: "Sesepuh DC2",
+      handle: "dc2_legend",
+      color: "#39FF7A",
+      avatar: botAvatar("dc2_legend", "lorelei"),
+      caption:
+        "Definisi animator lokal paling sepuh di DC2 ya cuman di ZONE. Gak ada obat smooth-nya, kelas abangkuh! 👑",
+      hashtags: ["ZONE", "DC2"],
+      mentions: ["Sion_dfkit"],
+      image: "",
+      createdAt: now - 26 * 60 * 60 * 1000,
+      likes: 3821,
+      reposts: 640,
+      views: 42130,
+      comments: mkComments([
+        { h: "lord.anime", t: "Riil sepuh, frame-nya butter smooth cuy 🧈" },
+        { h: "yuraaa_", t: "Kelas abangkuh emang beda 👑✨" },
+        { h: "miko_donghua", t: "Lokal tapi rasa donghua top tier 🔥" },
+      ]),
+    },
+    {
+      id: `seed_4_${now}`,
+      author: "Nadia_98",
+      handle: "nadia98x",
+      color: "#f5c518",
+      avatar: botAvatar("nadia98x", "avataaars"),
+      caption:
+        "Rewatch eps 5 lagi ternyata banyak detail kecil yang ke-skip, bang Sion emang detail freak parah 😭✨",
+      hashtags: ["Rewatch", "AkarTerlarang"],
+      mentions: [],
+      image: "",
+      createdAt: now - 9 * 60 * 60 * 1000,
+      likes: 927,
+      reposts: 132,
+      views: 10480,
+      comments: mkComments([
+        { h: "dindaaa_x", t: "Setuju bang, ada easter egg di background juga 👀" },
+        { h: "elsa.riil", t: "Gua rewatch 3x masih nemu detail baru anjir 🤯" },
+      ]),
+    },
+  ];
+}
+
+
 const DEFAULT_REPLIES = [
   "Wkwkwk bener juga sih bang 🗿",
   "Setuju cuy, mari kita ramein terus komunitasnya 🔥",
