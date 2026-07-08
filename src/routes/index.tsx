@@ -874,7 +874,27 @@ const DEFAULT_REPLIES = [
   "Njir lu ngomong gitu bikin gua ngakak parah wkwk",
 ];
 
+const SHORT_REPLIES = [
+  "Gas lah! 🔥",
+  "Setuju banget.",
+  "Ngegasss 🤝",
+  "Fix cuy 🗿",
+  "Sat set bang!",
+  "Mantul 🔥",
+];
+
+function isShortOrEmoji(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length <= 4) return true;
+  // Mostly emoji / non-word chars
+  const wordChars = trimmed.replace(/[\s\p{Emoji_Presentation}\p{Extended_Pictographic}\p{P}\p{S}]/gu, "");
+  return wordChars.length <= 3;
+}
+
 function pickBotReplyText(userText: string): string {
+  if (isShortOrEmoji(userText)) {
+    return SHORT_REPLIES[Math.floor(Math.random() * SHORT_REPLIES.length)];
+  }
   for (const pool of REPLY_POOLS) {
     if (pool.keys.test(userText)) return pool.lines[Math.floor(Math.random() * pool.lines.length)];
   }
