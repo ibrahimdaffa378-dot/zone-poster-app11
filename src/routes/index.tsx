@@ -650,6 +650,7 @@ type CommunityPost = {
   author: string;
   handle: string;
   color: string;
+  avatar?: string;
   verified?: boolean;
   caption: string;
   hashtags: string[];
