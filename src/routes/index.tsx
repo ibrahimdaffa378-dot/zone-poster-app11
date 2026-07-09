@@ -690,7 +690,73 @@ const BOT_POOL: { name: string; handle: string; color: string; avatar: string }[
   { name: "Reza", handle: "rezaa.op", color: "#fbbf24", avatar: botAvatar("rezaa.op", "personas") },
   { name: "Tio", handle: "tio.gg", color: "#38bdf8", avatar: botAvatar("tio.gg", "bottts") },
   { name: "Sinta", handle: "sinta.wibu", color: "#f472b6", avatar: botAvatar("sinta.wibu", "lorelei") },
+  { name: "Rian DC2", handle: "Rian_DC2", color: "#22c55e", avatar: botAvatar("Rian_DC2", "adventurer") },
+  { name: "Siti Donghua", handle: "Siti_Donghua", color: "#f43f5e", avatar: botAvatar("Siti_Donghua", "lorelei") },
+  { name: "Gamer Sepuh", handle: "GamerSepuh", color: "#eab308", avatar: botAvatar("GamerSepuh", "bottts") },
+  { name: "Boy Anims", handle: "boy.anims99", color: "#06b6d4", avatar: botAvatar("boy.anims99", "personas") },
+  { name: "Chikita", handle: "chikita.ntt", color: "#d946ef", avatar: botAvatar("chikita.ntt", "avataaars") },
 ];
+
+// ---- Bot Profile (deterministic per handle so it never re-shuffles) ----
+type BotProfileInfo = {
+  name: string;
+  handle: string;
+  color: string;
+  avatar: string;
+  verified?: boolean;
+  bio: string;
+  joined: string;
+  birth: string;
+  followers: number;
+  following: number;
+};
+
+function hashStr(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h);
+}
+const BOT_BIOS = [
+  "Hanya anak DC2 biasa 🌱",
+  "Gacha adalah jalan ninjaku 🎰",
+  "Menunggu eps 6 dengan sabar 🔥",
+  "Sesepuh timeline sejak 2019 🗿",
+  "Wibu terselubung, jangan bilang siapa-siapa 🤫",
+  "Menyala abangkuh, menyala 🔥🔥",
+  "Fans garis keras bang Sion 👑",
+  "Katanya sih anak FYP, katanya doang 😹",
+  "Hobinya war di kolom komen 📢",
+  "Blox Fruits sea 3 grinder 🦖",
+  "Cita-cita jadi animator kayak bang Sion ✍️",
+  "Rewatch Akar Terlarang tiap malem minggu 🌙",
+];
+const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+function botProfileFor(b: { name: string; handle: string; color: string; avatar: string; verified?: boolean }): BotProfileInfo {
+  const seed = hashStr(b.handle);
+  const bio = BOT_BIOS[seed % BOT_BIOS.length];
+  const jMonth = BULAN[(seed >> 3) % 12];
+  const jYear = 2019 + ((seed >> 7) % 6); // 2019-2024
+  const bDay = 1 + ((seed >> 11) % 28);
+  const bMonth = BULAN[(seed >> 13) % 12];
+  const bYear = 1998 + ((seed >> 17) % 12); // 1998-2009
+  const followers = 800 + ((seed >> 5) % 48000);
+  const following = 120 + ((seed >> 9) % 1800);
+  return {
+    name: b.name,
+    handle: b.handle,
+    color: b.color,
+    avatar: b.avatar,
+    verified: b.verified,
+    bio,
+    joined: `Bergabung ${jMonth} ${jYear}`,
+    birth: `Lahir ${bDay} ${bMonth} ${bYear}`,
+    followers,
+    following,
+  };
+}
 
 // Keyword-based bot reply pools
 const REPLY_POOLS: { keys: RegExp; lines: string[] }[] = [
