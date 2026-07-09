@@ -1325,6 +1325,7 @@ function CommunityFeed({
                         postId={p.id}
                         comment={c}
                         onReply={onReply}
+                        onDeleteReply={onDeleteReply}
                         meName={meName}
                         meHandle={meHandle}
                         meColor={meColor}
