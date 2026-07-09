@@ -2270,6 +2270,7 @@ function App({ session }: { session: Session }) {
             onReply={replyToComment}
             onDeletePost={deletePost}
             onDeleteReply={deleteReply}
+            onOpenBotProfile={setBotProfile}
             meName={authorName}
             meHandle={authorHandle}
             meColor={meColor}
