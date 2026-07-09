@@ -1395,26 +1395,54 @@ function CommentItem({
           <ul className="mt-2 space-y-2 border-l border-white/10 pl-3">
             {comment.replies.map((r) => (
               <li key={r.id} className="flex items-start gap-2 animate-fade-in">
-                {r.avatar ? (
-                  <img
-                    src={r.avatar}
-                    alt={r.name}
-                    loading="lazy"
-                    className="h-6 w-6 shrink-0 rounded-full border border-white/10 object-cover"
-                    style={{ background: r.color }}
-                  />
+                {r.isUser || r.typing ? (
+                  r.avatar ? (
+                    <img
+                      src={r.avatar}
+                      alt={r.name}
+                      loading="lazy"
+                      className="h-6 w-6 shrink-0 rounded-full border border-white/10 object-cover"
+                      style={{ background: r.color }}
+                    />
+                  ) : (
+                    <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[9px] font-black text-black" style={{ background: r.color }}>
+                      {r.name.charAt(0).toUpperCase()}
+                    </div>
+                  )
                 ) : (
-                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[9px] font-black text-black" style={{ background: r.color }}>
-                    {r.name.charAt(0).toUpperCase()}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onOpenBotProfile({ name: r.name, handle: r.handle, color: r.color, avatar: r.avatar, verified: r.verified })}
+                    className="shrink-0 rounded-full transition hover:opacity-80"
+                    aria-label={`Buka profil ${r.name}`}
+                  >
+                    <img
+                      src={r.avatar}
+                      alt={r.name}
+                      loading="lazy"
+                      className="h-6 w-6 rounded-full border border-white/10 object-cover"
+                      style={{ background: r.color }}
+                    />
+                  </button>
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-1 text-[10px]">
-                    <span className="font-bold text-white/90">{r.name}</span>
+                    {r.isUser || r.typing ? (
+                      <span className="font-bold text-white/90">{r.name}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onOpenBotProfile({ name: r.name, handle: r.handle, color: r.color, avatar: r.avatar, verified: r.verified })}
+                        className="font-bold text-white/90 hover:underline"
+                      >
+                        {r.name}
+                      </button>
+                    )}
                     {r.verified && <VerifiedCheck size={10} />}
                     <span className="text-white/40">@{r.handle} · {r.ago}</span>
                     {r.isUser && <span className="rounded-sm bg-white/10 px-1 text-[8px] uppercase tracking-widest text-white/60">kamu</span>}
                   </div>
+
                   <p className={`break-words text-[11px] ${r.typing ? "italic text-white/40" : "text-white/80"}`}>
                     {r.typing ? (
                       <span className="inline-flex items-center gap-1">
