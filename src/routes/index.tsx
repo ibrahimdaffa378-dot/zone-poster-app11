@@ -1974,6 +1974,8 @@ function App({ session }: { session: Session }) {
             onRepost={toggleRepost}
             onCreate={() => setShowCreate(true)}
             onReply={replyToComment}
+            onDeletePost={deletePost}
+            onDeleteReply={deleteReply}
             meName={authorName}
             meHandle={authorHandle}
             meColor={meColor}
