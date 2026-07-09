@@ -968,6 +968,97 @@ function pickBotReplyText(userText: string): string {
   return DEFAULT_REPLIES[Math.floor(Math.random() * DEFAULT_REPLIES.length)];
 }
 
+// ---- Debate / on-topic contextual brain ----
+const DEBATE_RE = /(gak setuju|ga setuju|nggak setuju|salah|ngaco|ngasal|cupu|jelek|gaje|gak masuk akal|nggak masuk akal|debat|protes|menurut gua beda|beda pendapat|halu|kok bisa|kok gitu|masa sih|masa iya|kagak|nggak lah|gak lah|bantah)/i;
+const AGREE_RE = /(iya sih|bener sih|setuju|fix|sepakat|riil|real|fakta|masuk akal|w setuju)/i;
+
+const DEBATE_ANIMASI = [
+  "Lah kok gitu? Coba lu liat framerate-nya di detik ke-30, itu smooth parah riil no fek. Lu bisa bikin yang lebih oke kah? Wkwk canda bang 😹",
+  "Bang santai, animator lokal udh usaha maksimal. Coba tunjuk part mana yang lu bilang cupu, gua counter satu-satu 🗿",
+  "Ngaco bang, in-between framenya rapi banget. Lu bandingin sama karya sebelah aja dulu deh, baru komen 🤝",
+  "Kalau lu bilang jelek berarti kita beda mata sih. Coba pause di scene tebasan, itu weight-nya kerasa banget cuy.",
+  "Wkwk debat kusir nih, tapi gapapa. Lu ngomong smooth-nya kurang, tapi gua liat sih udah level pro riil.",
+];
+const DEBATE_PLOT = [
+  "Gak bisa gitu cuy, justru kerudung hitam di belakang itu yang bikin plot twist-nya makin gila. Taruhan yuk pas eps 6 rilis! 🤝",
+  "Lu belum liat foreshadowing di eps 3 kayaknya bang, akar naga itu simbol dendam. Balik dulu rewatch, baru debat 😤",
+  "Bantah nih, alurnya justru rapih banget. Setiap scene ada payoff-nya di eps depan. Sabar tunggu eps 6 aja.",
+  "Ngaco bang, karakter utamanya justru berkembang tiap eps. Coba lu perhatiin dialognya, bukan cuma fight scene.",
+  "Kalau menurut lu alurnya lambat, berarti lu ketinggalan detail penting. Rewatch dulu eps 4, baru kita lanjut argumen wkwk.",
+];
+const DEBATE_GENERIC = [
+  "Lah masa sih? Gua ada argumen lain nih, tapi lu duluan deh jelasin kenapa lu mikir gitu 🤔",
+  "Boleh beda pendapat, tapi coba kasih alasan yang bikin gua yakin. Jangan cuma bilang nggak setuju doang cuy.",
+  "Sat set banget lu ngebantah wkwk, tapi ok gua tampung. Coba elaborasi biar diskusinya sehat 🗿",
+  "Wkwk gaya lu debat kayak sultan komen, tapi gua tunggu bukti konkret dulu ya bang.",
+  "Ok fine, kita agree to disagree. Tapi menurut gua sih lu bakal berubah pikiran pas eps 6 rilis 😹",
+];
+const CONTINUE_ANIMASI = [
+  "Nah itu maksud gua, animasinya emang niat parah. Frame ilangnya juga minim banget 🔥",
+  "Riil bang, coba lu liat efek partikel pas jurus, itu detail dewa sih menurut gua.",
+  "Emang seharusnya karya lokal gini yang di-hype, bukan yang jelek malah rame 🙏",
+  "Fix satu suara, animator lokal Zone ini deserve lebih banyak spotlight sih.",
+];
+const CONTINUE_PLOT = [
+  "Iya cuy, dan menurut gua kerudung hitam itu bakal reveal di eps 6 atau 7 max. Mark my words 🗿",
+  "Bener, tiap eps selalu ada clue kecil. Bang Sion emang jago naro foreshadowing wkwk.",
+  "Nah ini yang gua suka, penonton nyambung. Coba tebak siapa antagonis utamanya menurut lu 🤔",
+  "Sepakat, plot-nya makin dalem tiap eps. Semoga eps 6 gak nge-rush endingnya 🙏",
+];
+const CONTINUE_GENERIC = [
+  "Nyambung banget lu bang, lanjut ngobrol lah 🤝",
+  "Wkwk kita satu frekuensi ternyata, gas lanjut war di komen 😹",
+  "Iya sih, mikir gua sama persis. Lanjut, mau bahas apa lagi cuy?",
+  "Fix lu paham banget vibes komunitas Zone, respect 🔥",
+];
+
+type ThreadTurn = { text: string; isUser: boolean };
+function detectTopic(text: string): "animasi" | "plot" | "game" | "eps6" | "generic" {
+  if (/(animasi|animation|frame|smooth|render|efek|animator|epic|scene)/i.test(text)) return "animasi";
+  if (/(plot|alur|cerita|karakter|twist|reveal|ending|kerudung|akar|naga|antagonis)/i.test(text)) return "plot";
+  if (/(mabar|game|blox|fruit|main bareng|ml|ff|valo)/i.test(text)) return "game";
+  if (/(eps ?6|episode ?6|rilis|update|kapan|nunggu|tunggu|kelanjutan)/i.test(text)) return "eps6";
+  return "generic";
+}
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function pickBotReplyContextual(
+  originalComment: string,
+  thread: ThreadTurn[],
+  userText: string,
+): string {
+  if (isShortOrEmoji(userText)) return pick(SHORT_REPLIES);
+  // Topic from the original comment (thread anchor), fallback to user text
+  const topic = detectTopic(originalComment) === "generic" ? detectTopic(userText) : detectTopic(originalComment);
+  const userTurns = thread.filter((t) => t.isUser).length;
+  const isDebate = DEBATE_RE.test(userText);
+  const isAgree = AGREE_RE.test(userText);
+
+  if (isDebate) {
+    if (topic === "animasi") return pick(DEBATE_ANIMASI);
+    if (topic === "plot") return pick(DEBATE_PLOT);
+    return pick(DEBATE_GENERIC);
+  }
+
+  // After 2+ user turns, prefer contextual continuation
+  if (userTurns >= 2 && !isAgree) {
+    if (topic === "animasi") return pick(CONTINUE_ANIMASI);
+    if (topic === "plot") return pick(CONTINUE_PLOT);
+    if (topic === "generic") return pick(CONTINUE_GENERIC);
+  }
+
+  // Otherwise fall back to keyword pools (existing behavior)
+  for (const pool of REPLY_POOLS) {
+    if (pool.keys.test(userText)) return pick(pool.lines);
+  }
+  // Topic-based fallback so it stays on topic even without keyword hit
+  if (topic === "animasi") return pick(CONTINUE_ANIMASI);
+  if (topic === "plot") return pick(CONTINUE_PLOT);
+  if (topic === "game") return pick(REPLY_POOLS[2].lines);
+  if (topic === "eps6") return pick(REPLY_POOLS[1].lines);
+  return pick(DEFAULT_REPLIES);
+}
+
 
 const COMMENT_POOL: string[] = [
   "Menyala abangkuh! 🔥 Gak sabar nunggu eps 6 rilis!",
