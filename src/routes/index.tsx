@@ -1191,6 +1191,16 @@ function CommentItem({
                       </span>
                     ) : r.text}
                   </p>
+                  {r.isUser && !r.typing && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteReply(postId, comment.id, r.id)}
+                      className="mt-0.5 text-[9px] uppercase tracking-widest text-white/40 hover:text-red-400"
+                      aria-label="Hapus balasan"
+                    >
+                      🗑 Hapus
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
