@@ -1243,13 +1243,78 @@ function CreatePostModal({
   );
 }
 
+function BotProfileModal({
+  bot, onClose,
+}: {
+  bot: { name: string; handle: string; color: string; avatar: string; verified?: boolean };
+  onClose: () => void;
+}) {
+  const info = botProfileFor(bot);
+  const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K` : n.toString();
+  return (
+    <div
+      className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-4 backdrop-blur animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#0a0d0b] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative h-20" style={{ background: `linear-gradient(120deg, ${info.color}80, #000)` }}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/60 text-xs text-white/80 hover:bg-black/80"
+            aria-label="Tutup"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="-mt-8 px-4 pb-4">
+          <img
+            src={info.avatar}
+            alt={info.name}
+            className="h-16 w-16 rounded-full border-4 border-[#0a0d0b] object-cover"
+            style={{ background: info.color }}
+          />
+          <div className="mt-2 flex items-center gap-1">
+            <h3 className="text-base font-black text-white">{info.name}</h3>
+            {info.verified && <VerifiedCheck size={14} />}
+          </div>
+          <p className="text-xs text-white/50">@{info.handle}</p>
+          <p className="mt-3 text-sm text-white/85">{info.bio}</p>
+          <div className="mt-3 space-y-1 text-[11px] text-white/50">
+            <p>📅 {info.joined}</p>
+            <p>🎂 {info.birth}</p>
+          </div>
+          <div className="mt-3 flex items-center gap-4 text-xs">
+            <span><span className="font-black text-white">{fmt(info.following)}</span> <span className="text-white/50">Following</span></span>
+            <span><span className="font-black text-white">{fmt(info.followers)}</span> <span className="text-white/50">Followers</span></span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-4 w-full rounded-full py-2 text-xs font-black text-black"
+            style={{ background: NEON }}
+          >
+            Tutup Profil
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CommentItem({
-  postId, comment, onReply, onDeleteReply, meName, meHandle, meColor, meAvatar, meVerified,
+  postId, comment, onReply, onDeleteReply, onOpenBotProfile, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   postId: string;
   comment: BotComment;
   onReply: (postId: string, commentId: string, text: string) => void;
   onDeleteReply: (postId: string, commentId: string, replyId: string) => void;
+  onOpenBotProfile: (bot: { name: string; handle: string; color: string; avatar: string; verified?: boolean }) => void;
   meName: string;
   meHandle: string;
   meColor: string;
