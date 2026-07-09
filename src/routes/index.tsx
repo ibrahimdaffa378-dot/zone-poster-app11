@@ -664,6 +664,7 @@ type CommunityPost = {
   comments: BotComment[];
   liked?: boolean;
   reposted?: boolean;
+  isMine?: boolean;
 };
 
 function botAvatar(handle: string, style = "adventurer") {
