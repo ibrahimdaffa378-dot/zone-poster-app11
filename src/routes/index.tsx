@@ -664,6 +664,7 @@ type CommunityPost = {
   comments: BotComment[];
   liked?: boolean;
   reposted?: boolean;
+  isMine?: boolean;
 };
 
 function botAvatar(handle: string, style = "adventurer") {
@@ -1086,11 +1087,12 @@ function CreatePostModal({
 }
 
 function CommentItem({
-  postId, comment, onReply, meName, meHandle, meColor, meAvatar, meVerified,
+  postId, comment, onReply, onDeleteReply, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   postId: string;
   comment: BotComment;
   onReply: (postId: string, commentId: string, text: string) => void;
+  onDeleteReply: (postId: string, commentId: string, replyId: string) => void;
   meName: string;
   meHandle: string;
   meColor: string;
@@ -1189,6 +1191,16 @@ function CommentItem({
                       </span>
                     ) : r.text}
                   </p>
+                  {r.isUser && !r.typing && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteReply(postId, comment.id, r.id)}
+                      className="mt-0.5 text-[9px] uppercase tracking-widest text-white/40 hover:text-red-400"
+                      aria-label="Hapus balasan"
+                    >
+                      🗑 Hapus
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
@@ -1202,13 +1214,15 @@ function CommentItem({
 }
 
 function CommunityFeed({
-  posts, onLike, onRepost, onCreate, onReply, meName, meHandle, meColor, meAvatar, meVerified,
+  posts, onLike, onRepost, onCreate, onReply, onDeletePost, onDeleteReply, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   posts: CommunityPost[];
   onLike: (id: string) => void;
   onRepost: (id: string) => void;
   onCreate: () => void;
   onReply: (postId: string, commentId: string, text: string) => void;
+  onDeletePost: (id: string) => void;
+  onDeleteReply: (postId: string, commentId: string, replyId: string) => void;
   meName: string;
   meHandle: string;
   meColor: string;
@@ -1256,6 +1270,17 @@ function CommunityFeed({
                   {p.verified && <VerifiedCheck size={12} />}
                   <span className="text-white/40">@{p.handle}</span>
                   <span className="text-white/40">· {timeAgoShort(p.createdAt)}</span>
+                  {p.isMine && (
+                    <button
+                      type="button"
+                      onClick={() => onDeletePost(p.id)}
+                      className="ml-auto text-[10px] text-white/40 hover:text-red-400"
+                      aria-label="Hapus postingan"
+                      title="Hapus postingan"
+                    >
+                      🗑
+                    </button>
+                  )}
                 </div>
                 <p className="mt-1 whitespace-pre-wrap break-words text-sm text-white/90">
                   {p.caption}{" "}
@@ -1300,6 +1325,7 @@ function CommunityFeed({
                         postId={p.id}
                         comment={c}
                         onReply={onReply}
+                        onDeleteReply={onDeleteReply}
                         meName={meName}
                         meHandle={meHandle}
                         meColor={meColor}
@@ -1531,6 +1557,7 @@ function App({ session }: { session: Session }) {
       reposts: 0,
       views: 12,
       comments: [],
+      isMine: true,
     };
     setPosts((ps) => [post, ...ps]);
     setShowCreate(false);
@@ -1583,6 +1610,16 @@ function App({ session }: { session: Session }) {
     ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p));
   const toggleRepost = (id: string) => setPosts((ps) => ps.map((p) => p.id === id
     ? { ...p, reposted: !p.reposted, reposts: p.reposts + (p.reposted ? -1 : 1) } : p));
+
+  const deletePost = (id: string) => setPosts((ps) => ps.filter((p) => !(p.id === id && p.isMine)));
+  const deleteReply = (postId: string, commentId: string, replyId: string) =>
+    setPosts((ps) => ps.map((p) => p.id !== postId ? p : {
+      ...p,
+      comments: p.comments.map((c) => c.id !== commentId ? c : {
+        ...c,
+        replies: c.replies.filter((r) => !(r.id === replyId && r.isUser)),
+      }),
+    }));
 
   const replyToComment = (postId: string, commentId: string, text: string) => {
     const myReply: BotReply = {
@@ -1937,6 +1974,8 @@ function App({ session }: { session: Session }) {
             onRepost={toggleRepost}
             onCreate={() => setShowCreate(true)}
             onReply={replyToComment}
+            onDeletePost={deletePost}
+            onDeleteReply={deleteReply}
             meName={authorName}
             meHandle={authorHandle}
             meColor={meColor}
