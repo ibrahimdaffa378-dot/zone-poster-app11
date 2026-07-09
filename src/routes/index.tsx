@@ -2292,6 +2292,10 @@ function App({ session }: { session: Session }) {
         />
       )}
 
+      {botProfile && (
+        <BotProfileModal bot={botProfile} onClose={() => setBotProfile(null)} />
+      )}
+
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-black/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl">
