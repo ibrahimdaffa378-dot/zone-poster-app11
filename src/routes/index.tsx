@@ -1532,6 +1532,7 @@ function App({ session }: { session: Session }) {
       reposts: 0,
       views: 12,
       comments: [],
+      isMine: true,
     };
     setPosts((ps) => [post, ...ps]);
     setShowCreate(false);
