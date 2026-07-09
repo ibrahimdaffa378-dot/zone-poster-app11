@@ -1087,11 +1087,12 @@ function CreatePostModal({
 }
 
 function CommentItem({
-  postId, comment, onReply, meName, meHandle, meColor, meAvatar, meVerified,
+  postId, comment, onReply, onDeleteReply, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   postId: string;
   comment: BotComment;
   onReply: (postId: string, commentId: string, text: string) => void;
+  onDeleteReply: (postId: string, commentId: string, replyId: string) => void;
   meName: string;
   meHandle: string;
   meColor: string;
