@@ -1478,7 +1478,7 @@ function CommentItem({
 }
 
 function CommunityFeed({
-  posts, onLike, onRepost, onCreate, onReply, onDeletePost, onDeleteReply, meName, meHandle, meColor, meAvatar, meVerified,
+  posts, onLike, onRepost, onCreate, onReply, onDeletePost, onDeleteReply, onOpenBotProfile, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   posts: CommunityPost[];
   onLike: (id: string) => void;
@@ -1487,6 +1487,7 @@ function CommunityFeed({
   onReply: (postId: string, commentId: string, text: string) => void;
   onDeletePost: (id: string) => void;
   onDeleteReply: (postId: string, commentId: string, replyId: string) => void;
+  onOpenBotProfile: (bot: { name: string; handle: string; color: string; avatar: string; verified?: boolean }) => void;
   meName: string;
   meHandle: string;
   meColor: string;
