@@ -1586,6 +1586,16 @@ function App({ session }: { session: Session }) {
   const toggleRepost = (id: string) => setPosts((ps) => ps.map((p) => p.id === id
     ? { ...p, reposted: !p.reposted, reposts: p.reposts + (p.reposted ? -1 : 1) } : p));
 
+  const deletePost = (id: string) => setPosts((ps) => ps.filter((p) => !(p.id === id && p.isMine)));
+  const deleteReply = (postId: string, commentId: string, replyId: string) =>
+    setPosts((ps) => ps.map((p) => p.id !== postId ? p : {
+      ...p,
+      comments: p.comments.map((c) => c.id !== commentId ? c : {
+        ...c,
+        replies: c.replies.filter((r) => !(r.id === replyId && r.isUser)),
+      }),
+    }));
+
   const replyToComment = (postId: string, commentId: string, text: string) => {
     const myReply: BotReply = {
       id: randomId(),
