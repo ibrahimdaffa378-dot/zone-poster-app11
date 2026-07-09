@@ -1701,6 +1701,7 @@ function App({ session }: { session: Session }) {
   const [activeTab, setActiveTab] = useState<"watch" | "community">("watch");
   const [posts, setPosts] = useState<CommunityPost[]>(() => makeSeedPosts());
   const [showCreate, setShowCreate] = useState(false);
+  const [botProfile, setBotProfile] = useState<{ name: string; handle: string; color: string; avatar: string; verified?: boolean } | null>(null);
 
   useEffect(() => {
     try {
