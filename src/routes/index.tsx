@@ -1965,13 +1965,16 @@ function App({ session }: { session: Session }) {
           ...p,
           comments: p.comments.map((c) => {
             if (c.id !== commentId) return c;
+            const thread: ThreadTurn[] = c.replies
+              .filter((r) => !r.typing)
+              .map((r) => ({ text: r.text, isUser: !!r.isUser }));
             const botReply: BotReply = {
               id: randomId(),
               name: c.name,
               handle: c.handle,
               color: c.color,
               avatar: c.avatar,
-              text: pickBotReplyText(text),
+              text: pickBotReplyContextual(c.text, thread, text),
               ago: "baru saja",
             };
             return {
