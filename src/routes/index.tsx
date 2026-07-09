@@ -690,7 +690,73 @@ const BOT_POOL: { name: string; handle: string; color: string; avatar: string }[
   { name: "Reza", handle: "rezaa.op", color: "#fbbf24", avatar: botAvatar("rezaa.op", "personas") },
   { name: "Tio", handle: "tio.gg", color: "#38bdf8", avatar: botAvatar("tio.gg", "bottts") },
   { name: "Sinta", handle: "sinta.wibu", color: "#f472b6", avatar: botAvatar("sinta.wibu", "lorelei") },
+  { name: "Rian DC2", handle: "Rian_DC2", color: "#22c55e", avatar: botAvatar("Rian_DC2", "adventurer") },
+  { name: "Siti Donghua", handle: "Siti_Donghua", color: "#f43f5e", avatar: botAvatar("Siti_Donghua", "lorelei") },
+  { name: "Gamer Sepuh", handle: "GamerSepuh", color: "#eab308", avatar: botAvatar("GamerSepuh", "bottts") },
+  { name: "Boy Anims", handle: "boy.anims99", color: "#06b6d4", avatar: botAvatar("boy.anims99", "personas") },
+  { name: "Chikita", handle: "chikita.ntt", color: "#d946ef", avatar: botAvatar("chikita.ntt", "avataaars") },
 ];
+
+// ---- Bot Profile (deterministic per handle so it never re-shuffles) ----
+type BotProfileInfo = {
+  name: string;
+  handle: string;
+  color: string;
+  avatar: string;
+  verified?: boolean;
+  bio: string;
+  joined: string;
+  birth: string;
+  followers: number;
+  following: number;
+};
+
+function hashStr(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h);
+}
+const BOT_BIOS = [
+  "Hanya anak DC2 biasa 🌱",
+  "Gacha adalah jalan ninjaku 🎰",
+  "Menunggu eps 6 dengan sabar 🔥",
+  "Sesepuh timeline sejak 2019 🗿",
+  "Wibu terselubung, jangan bilang siapa-siapa 🤫",
+  "Menyala abangkuh, menyala 🔥🔥",
+  "Fans garis keras bang Sion 👑",
+  "Katanya sih anak FYP, katanya doang 😹",
+  "Hobinya war di kolom komen 📢",
+  "Blox Fruits sea 3 grinder 🦖",
+  "Cita-cita jadi animator kayak bang Sion ✍️",
+  "Rewatch Akar Terlarang tiap malem minggu 🌙",
+];
+const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+function botProfileFor(b: { name: string; handle: string; color: string; avatar: string; verified?: boolean }): BotProfileInfo {
+  const seed = hashStr(b.handle);
+  const bio = BOT_BIOS[seed % BOT_BIOS.length];
+  const jMonth = BULAN[(seed >> 3) % 12];
+  const jYear = 2019 + ((seed >> 7) % 6); // 2019-2024
+  const bDay = 1 + ((seed >> 11) % 28);
+  const bMonth = BULAN[(seed >> 13) % 12];
+  const bYear = 1998 + ((seed >> 17) % 12); // 1998-2009
+  const followers = 800 + ((seed >> 5) % 48000);
+  const following = 120 + ((seed >> 9) % 1800);
+  return {
+    name: b.name,
+    handle: b.handle,
+    color: b.color,
+    avatar: b.avatar,
+    verified: b.verified,
+    bio,
+    joined: `Bergabung ${jMonth} ${jYear}`,
+    birth: `Lahir ${bDay} ${bMonth} ${bYear}`,
+    followers,
+    following,
+  };
+}
 
 // Keyword-based bot reply pools
 const REPLY_POOLS: { keys: RegExp; lines: string[] }[] = [
@@ -902,6 +968,97 @@ function pickBotReplyText(userText: string): string {
   return DEFAULT_REPLIES[Math.floor(Math.random() * DEFAULT_REPLIES.length)];
 }
 
+// ---- Debate / on-topic contextual brain ----
+const DEBATE_RE = /(gak setuju|ga setuju|nggak setuju|salah|ngaco|ngasal|cupu|jelek|gaje|gak masuk akal|nggak masuk akal|debat|protes|menurut gua beda|beda pendapat|halu|kok bisa|kok gitu|masa sih|masa iya|kagak|nggak lah|gak lah|bantah)/i;
+const AGREE_RE = /(iya sih|bener sih|setuju|fix|sepakat|riil|real|fakta|masuk akal|w setuju)/i;
+
+const DEBATE_ANIMASI = [
+  "Lah kok gitu? Coba lu liat framerate-nya di detik ke-30, itu smooth parah riil no fek. Lu bisa bikin yang lebih oke kah? Wkwk canda bang 😹",
+  "Bang santai, animator lokal udh usaha maksimal. Coba tunjuk part mana yang lu bilang cupu, gua counter satu-satu 🗿",
+  "Ngaco bang, in-between framenya rapi banget. Lu bandingin sama karya sebelah aja dulu deh, baru komen 🤝",
+  "Kalau lu bilang jelek berarti kita beda mata sih. Coba pause di scene tebasan, itu weight-nya kerasa banget cuy.",
+  "Wkwk debat kusir nih, tapi gapapa. Lu ngomong smooth-nya kurang, tapi gua liat sih udah level pro riil.",
+];
+const DEBATE_PLOT = [
+  "Gak bisa gitu cuy, justru kerudung hitam di belakang itu yang bikin plot twist-nya makin gila. Taruhan yuk pas eps 6 rilis! 🤝",
+  "Lu belum liat foreshadowing di eps 3 kayaknya bang, akar naga itu simbol dendam. Balik dulu rewatch, baru debat 😤",
+  "Bantah nih, alurnya justru rapih banget. Setiap scene ada payoff-nya di eps depan. Sabar tunggu eps 6 aja.",
+  "Ngaco bang, karakter utamanya justru berkembang tiap eps. Coba lu perhatiin dialognya, bukan cuma fight scene.",
+  "Kalau menurut lu alurnya lambat, berarti lu ketinggalan detail penting. Rewatch dulu eps 4, baru kita lanjut argumen wkwk.",
+];
+const DEBATE_GENERIC = [
+  "Lah masa sih? Gua ada argumen lain nih, tapi lu duluan deh jelasin kenapa lu mikir gitu 🤔",
+  "Boleh beda pendapat, tapi coba kasih alasan yang bikin gua yakin. Jangan cuma bilang nggak setuju doang cuy.",
+  "Sat set banget lu ngebantah wkwk, tapi ok gua tampung. Coba elaborasi biar diskusinya sehat 🗿",
+  "Wkwk gaya lu debat kayak sultan komen, tapi gua tunggu bukti konkret dulu ya bang.",
+  "Ok fine, kita agree to disagree. Tapi menurut gua sih lu bakal berubah pikiran pas eps 6 rilis 😹",
+];
+const CONTINUE_ANIMASI = [
+  "Nah itu maksud gua, animasinya emang niat parah. Frame ilangnya juga minim banget 🔥",
+  "Riil bang, coba lu liat efek partikel pas jurus, itu detail dewa sih menurut gua.",
+  "Emang seharusnya karya lokal gini yang di-hype, bukan yang jelek malah rame 🙏",
+  "Fix satu suara, animator lokal Zone ini deserve lebih banyak spotlight sih.",
+];
+const CONTINUE_PLOT = [
+  "Iya cuy, dan menurut gua kerudung hitam itu bakal reveal di eps 6 atau 7 max. Mark my words 🗿",
+  "Bener, tiap eps selalu ada clue kecil. Bang Sion emang jago naro foreshadowing wkwk.",
+  "Nah ini yang gua suka, penonton nyambung. Coba tebak siapa antagonis utamanya menurut lu 🤔",
+  "Sepakat, plot-nya makin dalem tiap eps. Semoga eps 6 gak nge-rush endingnya 🙏",
+];
+const CONTINUE_GENERIC = [
+  "Nyambung banget lu bang, lanjut ngobrol lah 🤝",
+  "Wkwk kita satu frekuensi ternyata, gas lanjut war di komen 😹",
+  "Iya sih, mikir gua sama persis. Lanjut, mau bahas apa lagi cuy?",
+  "Fix lu paham banget vibes komunitas Zone, respect 🔥",
+];
+
+type ThreadTurn = { text: string; isUser: boolean };
+function detectTopic(text: string): "animasi" | "plot" | "game" | "eps6" | "generic" {
+  if (/(animasi|animation|frame|smooth|render|efek|animator|epic|scene)/i.test(text)) return "animasi";
+  if (/(plot|alur|cerita|karakter|twist|reveal|ending|kerudung|akar|naga|antagonis)/i.test(text)) return "plot";
+  if (/(mabar|game|blox|fruit|main bareng|ml|ff|valo)/i.test(text)) return "game";
+  if (/(eps ?6|episode ?6|rilis|update|kapan|nunggu|tunggu|kelanjutan)/i.test(text)) return "eps6";
+  return "generic";
+}
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function pickBotReplyContextual(
+  originalComment: string,
+  thread: ThreadTurn[],
+  userText: string,
+): string {
+  if (isShortOrEmoji(userText)) return pick(SHORT_REPLIES);
+  // Topic from the original comment (thread anchor), fallback to user text
+  const topic = detectTopic(originalComment) === "generic" ? detectTopic(userText) : detectTopic(originalComment);
+  const userTurns = thread.filter((t) => t.isUser).length;
+  const isDebate = DEBATE_RE.test(userText);
+  const isAgree = AGREE_RE.test(userText);
+
+  if (isDebate) {
+    if (topic === "animasi") return pick(DEBATE_ANIMASI);
+    if (topic === "plot") return pick(DEBATE_PLOT);
+    return pick(DEBATE_GENERIC);
+  }
+
+  // After 2+ user turns, prefer contextual continuation
+  if (userTurns >= 2 && !isAgree) {
+    if (topic === "animasi") return pick(CONTINUE_ANIMASI);
+    if (topic === "plot") return pick(CONTINUE_PLOT);
+    if (topic === "generic") return pick(CONTINUE_GENERIC);
+  }
+
+  // Otherwise fall back to keyword pools (existing behavior)
+  for (const pool of REPLY_POOLS) {
+    if (pool.keys.test(userText)) return pick(pool.lines);
+  }
+  // Topic-based fallback so it stays on topic even without keyword hit
+  if (topic === "animasi") return pick(CONTINUE_ANIMASI);
+  if (topic === "plot") return pick(CONTINUE_PLOT);
+  if (topic === "game") return pick(REPLY_POOLS[2].lines);
+  if (topic === "eps6") return pick(REPLY_POOLS[1].lines);
+  return pick(DEFAULT_REPLIES);
+}
+
 
 const COMMENT_POOL: string[] = [
   "Menyala abangkuh! 🔥 Gak sabar nunggu eps 6 rilis!",
@@ -1086,13 +1243,78 @@ function CreatePostModal({
   );
 }
 
+function BotProfileModal({
+  bot, onClose,
+}: {
+  bot: { name: string; handle: string; color: string; avatar: string; verified?: boolean };
+  onClose: () => void;
+}) {
+  const info = botProfileFor(bot);
+  const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K` : n.toString();
+  return (
+    <div
+      className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-4 backdrop-blur animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#0a0d0b] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative h-20" style={{ background: `linear-gradient(120deg, ${info.color}80, #000)` }}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/60 text-xs text-white/80 hover:bg-black/80"
+            aria-label="Tutup"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="-mt-8 px-4 pb-4">
+          <img
+            src={info.avatar}
+            alt={info.name}
+            className="h-16 w-16 rounded-full border-4 border-[#0a0d0b] object-cover"
+            style={{ background: info.color }}
+          />
+          <div className="mt-2 flex items-center gap-1">
+            <h3 className="text-base font-black text-white">{info.name}</h3>
+            {info.verified && <VerifiedCheck size={14} />}
+          </div>
+          <p className="text-xs text-white/50">@{info.handle}</p>
+          <p className="mt-3 text-sm text-white/85">{info.bio}</p>
+          <div className="mt-3 space-y-1 text-[11px] text-white/50">
+            <p>📅 {info.joined}</p>
+            <p>🎂 {info.birth}</p>
+          </div>
+          <div className="mt-3 flex items-center gap-4 text-xs">
+            <span><span className="font-black text-white">{fmt(info.following)}</span> <span className="text-white/50">Following</span></span>
+            <span><span className="font-black text-white">{fmt(info.followers)}</span> <span className="text-white/50">Followers</span></span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-4 w-full rounded-full py-2 text-xs font-black text-black"
+            style={{ background: NEON }}
+          >
+            Tutup Profil
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CommentItem({
-  postId, comment, onReply, onDeleteReply, meName, meHandle, meColor, meAvatar, meVerified,
+  postId, comment, onReply, onDeleteReply, onOpenBotProfile, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   postId: string;
   comment: BotComment;
   onReply: (postId: string, commentId: string, text: string) => void;
   onDeleteReply: (postId: string, commentId: string, replyId: string) => void;
+  onOpenBotProfile: (bot: { name: string; handle: string; color: string; avatar: string; verified?: boolean }) => void;
   meName: string;
   meHandle: string;
   meColor: string;
@@ -1110,18 +1332,32 @@ function CommentItem({
   };
   return (
     <li className="flex items-start gap-2 animate-fade-in">
-      <img
-        src={comment.avatar}
-        alt={comment.name}
-        loading="lazy"
-        className="h-8 w-8 shrink-0 rounded-full border border-white/10 bg-white/5 object-cover"
-        style={{ background: comment.color }}
-      />
+      <button
+        type="button"
+        onClick={() => onOpenBotProfile({ name: comment.name, handle: comment.handle, color: comment.color, avatar: comment.avatar })}
+        className="shrink-0 rounded-full transition hover:opacity-80"
+        aria-label={`Buka profil ${comment.name}`}
+      >
+        <img
+          src={comment.avatar}
+          alt={comment.name}
+          loading="lazy"
+          className="h-8 w-8 rounded-full border border-white/10 bg-white/5 object-cover"
+          style={{ background: comment.color }}
+        />
+      </button>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-1 text-[11px]">
-          <span className="font-bold text-white/90">{comment.name}</span>
+          <button
+            type="button"
+            onClick={() => onOpenBotProfile({ name: comment.name, handle: comment.handle, color: comment.color, avatar: comment.avatar })}
+            className="font-bold text-white/90 hover:underline"
+          >
+            {comment.name}
+          </button>
           <span className="text-white/40">@{comment.handle} · {comment.ago}</span>
         </div>
+
         <p className="break-words text-xs text-white/80">{comment.text}</p>
         <button
           type="button"
@@ -1159,26 +1395,54 @@ function CommentItem({
           <ul className="mt-2 space-y-2 border-l border-white/10 pl-3">
             {comment.replies.map((r) => (
               <li key={r.id} className="flex items-start gap-2 animate-fade-in">
-                {r.avatar ? (
-                  <img
-                    src={r.avatar}
-                    alt={r.name}
-                    loading="lazy"
-                    className="h-6 w-6 shrink-0 rounded-full border border-white/10 object-cover"
-                    style={{ background: r.color }}
-                  />
+                {r.isUser || r.typing ? (
+                  r.avatar ? (
+                    <img
+                      src={r.avatar}
+                      alt={r.name}
+                      loading="lazy"
+                      className="h-6 w-6 shrink-0 rounded-full border border-white/10 object-cover"
+                      style={{ background: r.color }}
+                    />
+                  ) : (
+                    <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[9px] font-black text-black" style={{ background: r.color }}>
+                      {r.name.charAt(0).toUpperCase()}
+                    </div>
+                  )
                 ) : (
-                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[9px] font-black text-black" style={{ background: r.color }}>
-                    {r.name.charAt(0).toUpperCase()}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onOpenBotProfile({ name: r.name, handle: r.handle, color: r.color, avatar: r.avatar, verified: r.verified })}
+                    className="shrink-0 rounded-full transition hover:opacity-80"
+                    aria-label={`Buka profil ${r.name}`}
+                  >
+                    <img
+                      src={r.avatar}
+                      alt={r.name}
+                      loading="lazy"
+                      className="h-6 w-6 rounded-full border border-white/10 object-cover"
+                      style={{ background: r.color }}
+                    />
+                  </button>
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-1 text-[10px]">
-                    <span className="font-bold text-white/90">{r.name}</span>
+                    {r.isUser || r.typing ? (
+                      <span className="font-bold text-white/90">{r.name}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onOpenBotProfile({ name: r.name, handle: r.handle, color: r.color, avatar: r.avatar, verified: r.verified })}
+                        className="font-bold text-white/90 hover:underline"
+                      >
+                        {r.name}
+                      </button>
+                    )}
                     {r.verified && <VerifiedCheck size={10} />}
                     <span className="text-white/40">@{r.handle} · {r.ago}</span>
                     {r.isUser && <span className="rounded-sm bg-white/10 px-1 text-[8px] uppercase tracking-widest text-white/60">kamu</span>}
                   </div>
+
                   <p className={`break-words text-[11px] ${r.typing ? "italic text-white/40" : "text-white/80"}`}>
                     {r.typing ? (
                       <span className="inline-flex items-center gap-1">
@@ -1214,7 +1478,7 @@ function CommentItem({
 }
 
 function CommunityFeed({
-  posts, onLike, onRepost, onCreate, onReply, onDeletePost, onDeleteReply, meName, meHandle, meColor, meAvatar, meVerified,
+  posts, onLike, onRepost, onCreate, onReply, onDeletePost, onDeleteReply, onOpenBotProfile, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   posts: CommunityPost[];
   onLike: (id: string) => void;
@@ -1223,6 +1487,7 @@ function CommunityFeed({
   onReply: (postId: string, commentId: string, text: string) => void;
   onDeletePost: (id: string) => void;
   onDeleteReply: (postId: string, commentId: string, replyId: string) => void;
+  onOpenBotProfile: (bot: { name: string; handle: string; color: string; avatar: string; verified?: boolean }) => void;
   meName: string;
   meHandle: string;
   meColor: string;
@@ -1257,16 +1522,43 @@ function CommunityFeed({
         {posts.map((p) => (
           <li key={p.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
             <div className="flex items-start gap-2">
-              {p.avatar ? (
-                <img src={p.avatar} alt={p.author} className="h-10 w-10 shrink-0 rounded-full object-cover" style={{ background: p.color }} loading="lazy" />
+              {p.isMine ? (
+                p.avatar ? (
+                  <img src={p.avatar} alt={p.author} className="h-10 w-10 shrink-0 rounded-full object-cover" style={{ background: p.color }} loading="lazy" />
+                ) : (
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-black text-black" style={{ background: p.color }}>
+                    {p.author.charAt(0).toUpperCase()}
+                  </div>
+                )
               ) : (
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-black text-black" style={{ background: p.color }}>
-                  {p.author.charAt(0).toUpperCase()}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onOpenBotProfile({ name: p.author, handle: p.handle, color: p.color, avatar: p.avatar ?? botAvatar(p.handle), verified: p.verified })}
+                  className="shrink-0 rounded-full transition hover:opacity-80"
+                  aria-label={`Buka profil ${p.author}`}
+                >
+                  {p.avatar ? (
+                    <img src={p.avatar} alt={p.author} className="h-10 w-10 rounded-full object-cover" style={{ background: p.color }} loading="lazy" />
+                  ) : (
+                    <div className="grid h-10 w-10 place-items-center rounded-full text-sm font-black text-black" style={{ background: p.color }}>
+                      {p.author.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </button>
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1 text-xs">
-                  <span className="font-bold text-white/95">{p.author}</span>
+                  {p.isMine ? (
+                    <span className="font-bold text-white/95">{p.author}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onOpenBotProfile({ name: p.author, handle: p.handle, color: p.color, avatar: p.avatar ?? botAvatar(p.handle), verified: p.verified })}
+                      className="font-bold text-white/95 hover:underline"
+                    >
+                      {p.author}
+                    </button>
+                  )}
                   {p.verified && <VerifiedCheck size={12} />}
                   <span className="text-white/40">@{p.handle}</span>
                   <span className="text-white/40">· {timeAgoShort(p.createdAt)}</span>
@@ -1282,6 +1574,7 @@ function CommunityFeed({
                     </button>
                   )}
                 </div>
+
                 <p className="mt-1 whitespace-pre-wrap break-words text-sm text-white/90">
                   {p.caption}{" "}
                   {p.mentions.map((m) => (
@@ -1326,6 +1619,7 @@ function CommunityFeed({
                         comment={c}
                         onReply={onReply}
                         onDeleteReply={onDeleteReply}
+                        onOpenBotProfile={onOpenBotProfile}
                         meName={meName}
                         meHandle={meHandle}
                         meColor={meColor}
@@ -1407,6 +1701,7 @@ function App({ session }: { session: Session }) {
   const [activeTab, setActiveTab] = useState<"watch" | "community">("watch");
   const [posts, setPosts] = useState<CommunityPost[]>(() => makeSeedPosts());
   const [showCreate, setShowCreate] = useState(false);
+  const [botProfile, setBotProfile] = useState<{ name: string; handle: string; color: string; avatar: string; verified?: boolean } | null>(null);
 
   useEffect(() => {
     try {
@@ -1670,13 +1965,16 @@ function App({ session }: { session: Session }) {
           ...p,
           comments: p.comments.map((c) => {
             if (c.id !== commentId) return c;
+            const thread: ThreadTurn[] = c.replies
+              .filter((r) => !r.typing)
+              .map((r) => ({ text: r.text, isUser: !!r.isUser }));
             const botReply: BotReply = {
               id: randomId(),
               name: c.name,
               handle: c.handle,
               color: c.color,
               avatar: c.avatar,
-              text: pickBotReplyText(text),
+              text: pickBotReplyContextual(c.text, thread, text),
               ago: "baru saja",
             };
             return {
@@ -1976,6 +2274,7 @@ function App({ session }: { session: Session }) {
             onReply={replyToComment}
             onDeletePost={deletePost}
             onDeleteReply={deleteReply}
+            onOpenBotProfile={setBotProfile}
             meName={authorName}
             meHandle={authorHandle}
             meColor={meColor}
@@ -1994,6 +2293,10 @@ function App({ session }: { session: Session }) {
           onClose={() => setShowCreate(false)}
           onPost={createPost}
         />
+      )}
+
+      {botProfile && (
+        <BotProfileModal bot={botProfile} onClose={() => setBotProfile(null)} />
       )}
 
       {/* Bottom Navigation */}
