@@ -1619,6 +1619,7 @@ function CommunityFeed({
                         comment={c}
                         onReply={onReply}
                         onDeleteReply={onDeleteReply}
+                        onOpenBotProfile={onOpenBotProfile}
                         meName={meName}
                         meHandle={meHandle}
                         meColor={meColor}
