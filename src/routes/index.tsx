@@ -1203,13 +1203,15 @@ function CommentItem({
 }
 
 function CommunityFeed({
-  posts, onLike, onRepost, onCreate, onReply, meName, meHandle, meColor, meAvatar, meVerified,
+  posts, onLike, onRepost, onCreate, onReply, onDeletePost, onDeleteReply, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   posts: CommunityPost[];
   onLike: (id: string) => void;
   onRepost: (id: string) => void;
   onCreate: () => void;
   onReply: (postId: string, commentId: string, text: string) => void;
+  onDeletePost: (id: string) => void;
+  onDeleteReply: (postId: string, commentId: string, replyId: string) => void;
   meName: string;
   meHandle: string;
   meColor: string;
