@@ -1332,18 +1332,32 @@ function CommentItem({
   };
   return (
     <li className="flex items-start gap-2 animate-fade-in">
-      <img
-        src={comment.avatar}
-        alt={comment.name}
-        loading="lazy"
-        className="h-8 w-8 shrink-0 rounded-full border border-white/10 bg-white/5 object-cover"
-        style={{ background: comment.color }}
-      />
+      <button
+        type="button"
+        onClick={() => onOpenBotProfile({ name: comment.name, handle: comment.handle, color: comment.color, avatar: comment.avatar })}
+        className="shrink-0 rounded-full transition hover:opacity-80"
+        aria-label={`Buka profil ${comment.name}`}
+      >
+        <img
+          src={comment.avatar}
+          alt={comment.name}
+          loading="lazy"
+          className="h-8 w-8 rounded-full border border-white/10 bg-white/5 object-cover"
+          style={{ background: comment.color }}
+        />
+      </button>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-1 text-[11px]">
-          <span className="font-bold text-white/90">{comment.name}</span>
+          <button
+            type="button"
+            onClick={() => onOpenBotProfile({ name: comment.name, handle: comment.handle, color: comment.color, avatar: comment.avatar })}
+            className="font-bold text-white/90 hover:underline"
+          >
+            {comment.name}
+          </button>
           <span className="text-white/40">@{comment.handle} · {comment.ago}</span>
         </div>
+
         <p className="break-words text-xs text-white/80">{comment.text}</p>
         <button
           type="button"
