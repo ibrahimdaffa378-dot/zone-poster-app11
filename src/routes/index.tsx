@@ -2778,7 +2778,7 @@ function App({ session }: { session: Session }) {
           meName={authorName}
           meHandle={authorHandle}
           meColor={meColor}
-          meAvatar={me?.avatar_url ?? undefined}
+          meAvatar={undefined}
           meVerified={authorVerified}
         />
 
