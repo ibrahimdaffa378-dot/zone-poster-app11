@@ -1028,8 +1028,30 @@ function makeSeedPosts(): CommunityPost[] {
         { h: "elsa.riil", t: "Gua rewatch 3x masih nemu detail baru anjir 🤯" },
       ]),
     },
+    {
+      id: `seed_mabar_${now}`,
+      author: "MieAyamLovers",
+      handle: "saya_sukamieayam89",
+      color: "#fbbf24",
+      avatar: botAvatar("saya_sukamieayam89", "adventurer"),
+      caption: "Info mabar Roblox dong cuy, bosen nih sendiri mulu wkwk 🦖",
+      hashtags: ["RobloxIndonesia", "Mabar"],
+      mentions: [],
+      image: "",
+      createdAt: now - 45 * 60 * 1000,
+      likes: 2148,
+      reposts: 384,
+      views: 21870,
+      comments: mkComments([
+        { h: "tio.gg", t: "Gasss bang, gua lagi grinding Blox Fruits juga wkwk 🦖" },
+        { h: "boxfruit_main", t: "Room gua kosong, drop nick lu sini cuy 🎮" },
+        { h: "rangga.op", t: "Mabar Doors atau BedWars nih? Gua ikut 🗿" },
+        { h: "fyp.bocah", t: "Bjirr sepi juga ya, gas bareng aja 😹" },
+      ]),
+    },
   ];
 }
+
 
 
 const DEFAULT_REPLIES = [
