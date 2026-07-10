@@ -1801,6 +1801,24 @@ function App({ session }: { session: Session }) {
   const [showCreate, setShowCreate] = useState(false);
   const [botProfile, setBotProfile] = useState<{ name: string; handle: string; color: string; avatar: string; verified?: boolean } | null>(null);
 
+  const [watchedEps, setWatchedEps] = useState<Set<number>>(() => {
+    try {
+      const raw = localStorage.getItem(WATCHED_KEY);
+      if (raw) return new Set<number>(JSON.parse(raw));
+    } catch { /* ignore */ }
+    return new Set<number>();
+  });
+  const markEpisodeWatched = useCallback((num: number) => {
+    setWatchedEps((prev) => {
+      if (prev.has(num)) return prev;
+      const next = new Set(prev);
+      next.add(num);
+      try { localStorage.setItem(WATCHED_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+
   useEffect(() => {
     try {
       const t = (localStorage.getItem(TIER_KEY) as Tier | null) ?? "standard";
