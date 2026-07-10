@@ -2451,6 +2451,8 @@ function App({ session }: { session: Session }) {
           profile={me}
           tier={tier}
           isOwner={isOwner}
+          watchedCount={watchedEps.size}
+          totalEpisodes={EPISODES.length}
           onClose={() => setShowProfile(false)}
           onSaved={(p) => { setMe(p); setProfilesMap((m) => ({ ...m, [p.id]: p })); }}
           onSignOut={signOut}
