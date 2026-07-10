@@ -33,6 +33,53 @@ const EPISODES: Episode[] = [
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2];
 const NEON = "#39FF7A";
 
+// ---------------- RANK SYSTEM (Beta) ----------------
+const WATCHED_KEY = "hdd_watched_eps_v1";
+const MAX_LEVEL = 19;
+
+type RankInfo = {
+  level: number;
+  tierName: "Coklat" | "Silver" | "Gold [Beta]";
+  color: string;
+  glow: string;
+  nextLevelAt: number | null; // watched-count needed to reach next level
+  progressPct: number; // 0-100 progress within current rank tier
+};
+
+function computeRank(watchedCount: number, total: number): RankInfo {
+  const clamped = Math.max(0, Math.min(watchedCount, total));
+  const level = total > 0
+    ? Math.max(1, Math.min(MAX_LEVEL, Math.round(1 + (clamped * (MAX_LEVEL - 1)) / total)))
+    : 1;
+  let tierName: RankInfo["tierName"];
+  let color: string;
+  let glow: string;
+  let tierStart: number;
+  let tierEnd: number;
+  if (level <= 9) {
+    tierName = "Coklat";
+    color = "#a97142";
+    glow = "rgba(169,113,66,0.5)";
+    tierStart = 1; tierEnd = 9;
+  } else if (level <= 17) {
+    tierName = "Silver";
+    color = "#c9d1d9";
+    glow = "rgba(201,209,217,0.55)";
+    tierStart = 10; tierEnd = 17;
+  } else {
+    tierName = "Gold [Beta]";
+    color = "#ffd257";
+    glow = "rgba(255,210,87,0.6)";
+    tierStart = 18; tierEnd = 19;
+  }
+  const span = tierEnd - tierStart;
+  const progressPct = span === 0
+    ? (level >= tierEnd ? 100 : 0)
+    : Math.round(((level - tierStart) / span) * 100);
+  const nextLevelAt = level >= MAX_LEVEL ? null : Math.ceil(((level) * total) / (MAX_LEVEL - 1));
+  return { level, tierName, color, glow, nextLevelAt, progressPct };
+}
+
 type Profile = {
   id: string;
   username: string;
