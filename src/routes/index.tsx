@@ -606,6 +606,53 @@ function ProfileSheet({
           </div>
         )}
 
+        {/* Rank / Pangkat (Beta) */}
+        {(() => {
+          const rank = computeRank(watchedCount, totalEpisodes);
+          return (
+            <div
+              className="mb-4 rounded-xl border p-3"
+              style={{ borderColor: `${rank.color}55`, background: `${rank.color}10` }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="grid h-8 w-8 place-items-center rounded-full text-xs font-black text-black"
+                    style={{ background: rank.color, boxShadow: `0 0 12px ${rank.glow}` }}
+                  >
+                    {rank.level}
+                  </span>
+                  <div className="leading-tight">
+                    <div className="text-[10px] uppercase tracking-widest text-white/40">Pangkat Saat Ini</div>
+                    <div className="text-sm font-black" style={{ color: rank.color }}>
+                      Level {rank.level} — {rank.tierName}
+                    </div>
+                  </div>
+                </div>
+                <span className="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+                  style={{ borderColor: `${rank.color}80`, color: rank.color }}>
+                  Beta
+                </span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full transition-[width]"
+                  style={{ width: `${rank.progressPct}%`, background: rank.color, boxShadow: `0 0 8px ${rank.glow}` }}
+                />
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[10px] text-white/50">
+                <span>{watchedCount}/{totalEpisodes} episode selesai ditonton</span>
+                <span>
+                  {rank.level >= MAX_LEVEL
+                    ? "Rank maksimal versi beta"
+                    : `Progress ke rank berikutnya: ${rank.progressPct}%`}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
+
         <label className="block text-[10px] uppercase tracking-widest text-white/40">Nama tampilan</label>
         <div className="relative mt-1">
           <input
