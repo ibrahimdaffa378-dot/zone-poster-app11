@@ -2228,7 +2228,14 @@ function App({ session }: { session: Session }) {
               onClick={togglePlay}
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
-              onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+              onTimeUpdate={(e) => {
+                const v = e.currentTarget;
+                setTime(v.currentTime);
+                if (v.duration > 0 && v.currentTime / v.duration >= 0.9) {
+                  markEpisodeWatched(current.num);
+                }
+              }}
+              onEnded={() => markEpisodeWatched(current.num)}
               onLoadedMetadata={(e) => setDur(e.currentTarget.duration)}
               playsInline
             />
