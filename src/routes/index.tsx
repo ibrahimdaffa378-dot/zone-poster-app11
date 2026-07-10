@@ -794,6 +794,7 @@ const BOT_POOL: { name: string; handle: string; color: string; avatar: string }[
   { name: "Gamer Sepuh", handle: "GamerSepuh", color: "#eab308", avatar: botAvatar("GamerSepuh", "bottts") },
   { name: "Boy Anims", handle: "boy.anims99", color: "#06b6d4", avatar: botAvatar("boy.anims99", "personas") },
   { name: "Chikita", handle: "chikita.ntt", color: "#d946ef", avatar: botAvatar("chikita.ntt", "avataaars") },
+  { name: "MieAyamLovers", handle: "saya_sukamieayam89", color: "#fbbf24", avatar: botAvatar("saya_sukamieayam89", "adventurer") },
 ];
 
 // ---- Bot Profile (deterministic per handle so it never re-shuffles) ----
