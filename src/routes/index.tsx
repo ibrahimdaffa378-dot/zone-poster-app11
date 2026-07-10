@@ -2771,7 +2771,17 @@ function App({ session }: { session: Session }) {
       )}
 
       {botProfile && (
-        <BotProfileModal bot={botProfile} onClose={() => setBotProfile(null)} />
+        <BotProfileModal
+          bot={botProfile}
+          onClose={() => setBotProfile(null)}
+          onOpenBotProfile={setBotProfile}
+          meName={authorName}
+          meHandle={authorHandle}
+          meColor={meColor}
+          meAvatar={me?.avatar_url ?? undefined}
+          meVerified={authorVerified}
+        />
+
       )}
 
       {/* Bottom Navigation */}
