@@ -511,6 +511,8 @@ function ProfileSheet({
   profile,
   tier,
   isOwner,
+  watchedCount,
+  totalEpisodes,
   onClose,
   onSaved,
   onSignOut,
@@ -518,6 +520,8 @@ function ProfileSheet({
   profile: Profile;
   tier: Tier;
   isOwner: boolean;
+  watchedCount: number;
+  totalEpisodes: number;
   onClose: () => void;
   onSaved: (p: Profile) => void;
   onSignOut: () => void;
