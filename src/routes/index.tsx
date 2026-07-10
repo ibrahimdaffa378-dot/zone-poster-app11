@@ -33,6 +33,53 @@ const EPISODES: Episode[] = [
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2];
 const NEON = "#39FF7A";
 
+// ---------------- RANK SYSTEM (Beta) ----------------
+const WATCHED_KEY = "hdd_watched_eps_v1";
+const MAX_LEVEL = 19;
+
+type RankInfo = {
+  level: number;
+  tierName: "Coklat" | "Silver" | "Gold [Beta]";
+  color: string;
+  glow: string;
+  nextLevelAt: number | null; // watched-count needed to reach next level
+  progressPct: number; // 0-100 progress within current rank tier
+};
+
+function computeRank(watchedCount: number, total: number): RankInfo {
+  const clamped = Math.max(0, Math.min(watchedCount, total));
+  const level = total > 0
+    ? Math.max(1, Math.min(MAX_LEVEL, Math.round(1 + (clamped * (MAX_LEVEL - 1)) / total)))
+    : 1;
+  let tierName: RankInfo["tierName"];
+  let color: string;
+  let glow: string;
+  let tierStart: number;
+  let tierEnd: number;
+  if (level <= 9) {
+    tierName = "Coklat";
+    color = "#a97142";
+    glow = "rgba(169,113,66,0.5)";
+    tierStart = 1; tierEnd = 9;
+  } else if (level <= 17) {
+    tierName = "Silver";
+    color = "#c9d1d9";
+    glow = "rgba(201,209,217,0.55)";
+    tierStart = 10; tierEnd = 17;
+  } else {
+    tierName = "Gold [Beta]";
+    color = "#ffd257";
+    glow = "rgba(255,210,87,0.6)";
+    tierStart = 18; tierEnd = 19;
+  }
+  const span = tierEnd - tierStart;
+  const progressPct = span === 0
+    ? (level >= tierEnd ? 100 : 0)
+    : Math.round(((level - tierStart) / span) * 100);
+  const nextLevelAt = level >= MAX_LEVEL ? null : Math.ceil(((level) * total) / (MAX_LEVEL - 1));
+  return { level, tierName, color, glow, nextLevelAt, progressPct };
+}
+
 type Profile = {
   id: string;
   username: string;
@@ -464,6 +511,8 @@ function ProfileSheet({
   profile,
   tier,
   isOwner,
+  watchedCount,
+  totalEpisodes,
   onClose,
   onSaved,
   onSignOut,
@@ -471,6 +520,8 @@ function ProfileSheet({
   profile: Profile;
   tier: Tier;
   isOwner: boolean;
+  watchedCount: number;
+  totalEpisodes: number;
   onClose: () => void;
   onSaved: (p: Profile) => void;
   onSignOut: () => void;
@@ -554,6 +605,53 @@ function ProfileSheet({
             </div>
           </div>
         )}
+
+        {/* Rank / Pangkat (Beta) */}
+        {(() => {
+          const rank = computeRank(watchedCount, totalEpisodes);
+          return (
+            <div
+              className="mb-4 rounded-xl border p-3"
+              style={{ borderColor: `${rank.color}55`, background: `${rank.color}10` }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="grid h-8 w-8 place-items-center rounded-full text-xs font-black text-black"
+                    style={{ background: rank.color, boxShadow: `0 0 12px ${rank.glow}` }}
+                  >
+                    {rank.level}
+                  </span>
+                  <div className="leading-tight">
+                    <div className="text-[10px] uppercase tracking-widest text-white/40">Pangkat Saat Ini</div>
+                    <div className="text-sm font-black" style={{ color: rank.color }}>
+                      Level {rank.level} — {rank.tierName}
+                    </div>
+                  </div>
+                </div>
+                <span className="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+                  style={{ borderColor: `${rank.color}80`, color: rank.color }}>
+                  Beta
+                </span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full transition-[width]"
+                  style={{ width: `${rank.progressPct}%`, background: rank.color, boxShadow: `0 0 8px ${rank.glow}` }}
+                />
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[10px] text-white/50">
+                <span>{watchedCount}/{totalEpisodes} episode selesai ditonton</span>
+                <span>
+                  {rank.level >= MAX_LEVEL
+                    ? "Rank maksimal versi beta"
+                    : `Progress ke rank berikutnya: ${rank.progressPct}%`}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
 
         <label className="block text-[10px] uppercase tracking-widest text-white/40">Nama tampilan</label>
         <div className="relative mt-1">
@@ -1703,6 +1801,24 @@ function App({ session }: { session: Session }) {
   const [showCreate, setShowCreate] = useState(false);
   const [botProfile, setBotProfile] = useState<{ name: string; handle: string; color: string; avatar: string; verified?: boolean } | null>(null);
 
+  const [watchedEps, setWatchedEps] = useState<Set<number>>(() => {
+    try {
+      const raw = localStorage.getItem(WATCHED_KEY);
+      if (raw) return new Set<number>(JSON.parse(raw));
+    } catch { /* ignore */ }
+    return new Set<number>();
+  });
+  const markEpisodeWatched = useCallback((num: number) => {
+    setWatchedEps((prev) => {
+      if (prev.has(num)) return prev;
+      const next = new Set(prev);
+      next.add(num);
+      try { localStorage.setItem(WATCHED_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+
   useEffect(() => {
     try {
       const t = (localStorage.getItem(TIER_KEY) as Tier | null) ?? "standard";
@@ -2112,7 +2228,14 @@ function App({ session }: { session: Session }) {
               onClick={togglePlay}
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
-              onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
+              onTimeUpdate={(e) => {
+                const v = e.currentTarget;
+                setTime(v.currentTime);
+                if (v.duration > 0 && v.currentTime / v.duration >= 0.9) {
+                  markEpisodeWatched(current.num);
+                }
+              }}
+              onEnded={() => markEpisodeWatched(current.num)}
               onLoadedMetadata={(e) => setDur(e.currentTarget.duration)}
               playsInline
             />
@@ -2328,6 +2451,8 @@ function App({ session }: { session: Session }) {
           profile={me}
           tier={tier}
           isOwner={isOwner}
+          watchedCount={watchedEps.size}
+          totalEpisodes={EPISODES.length}
           onClose={() => setShowProfile(false)}
           onSaved={(p) => { setMe(p); setProfilesMap((m) => ({ ...m, [p.id]: p })); }}
           onSignOut={signOut}
