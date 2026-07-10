@@ -7,6 +7,7 @@ import ep4 from "@/assets/ep4.mp4.asset.json";
 import ep5 from "@/assets/ep5.mp4.asset.json";
 import poster from "@/assets/hdd-poster.asset.json";
 import ep6Poster from "@/assets/ep6-akar-terlarang.jpg.asset.json";
+import taichuVideo from "@/assets/taichu-leizhen.mp4.asset.json";
 
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -793,6 +794,7 @@ const BOT_POOL: { name: string; handle: string; color: string; avatar: string }[
   { name: "Gamer Sepuh", handle: "GamerSepuh", color: "#eab308", avatar: botAvatar("GamerSepuh", "bottts") },
   { name: "Boy Anims", handle: "boy.anims99", color: "#06b6d4", avatar: botAvatar("boy.anims99", "personas") },
   { name: "Chikita", handle: "chikita.ntt", color: "#d946ef", avatar: botAvatar("chikita.ntt", "avataaars") },
+  { name: "MieAyamLovers", handle: "saya_sukamieayam89", color: "#fbbf24", avatar: botAvatar("saya_sukamieayam89", "adventurer") },
 ];
 
 // ---- Bot Profile (deterministic per handle so it never re-shuffles) ----
@@ -1026,8 +1028,30 @@ function makeSeedPosts(): CommunityPost[] {
         { h: "elsa.riil", t: "Gua rewatch 3x masih nemu detail baru anjir 🤯" },
       ]),
     },
+    {
+      id: `seed_mabar_${now}`,
+      author: "MieAyamLovers",
+      handle: "saya_sukamieayam89",
+      color: "#fbbf24",
+      avatar: botAvatar("saya_sukamieayam89", "adventurer"),
+      caption: "Info mabar Roblox dong cuy, bosen nih sendiri mulu wkwk 🦖",
+      hashtags: ["RobloxIndonesia", "Mabar"],
+      mentions: [],
+      image: "",
+      createdAt: now - 45 * 60 * 1000,
+      likes: 2148,
+      reposts: 384,
+      views: 21870,
+      comments: mkComments([
+        { h: "tio.gg", t: "Gasss bang, gua lagi grinding Blox Fruits juga wkwk 🦖" },
+        { h: "boxfruit_main", t: "Room gua kosong, drop nick lu sini cuy 🎮" },
+        { h: "rangga.op", t: "Mabar Doors atau BedWars nih? Gua ikut 🗿" },
+        { h: "fyp.bocah", t: "Bjirr sepi juga ya, gas bareng aja 😹" },
+      ]),
+    },
   ];
 }
+
 
 
 const DEFAULT_REPLIES = [
@@ -1341,23 +1365,314 @@ function CreatePostModal({
   );
 }
 
+type VideoBotComment = {
+  id: string;
+  name: string;
+  handle: string;
+  color: string;
+  avatar: string;
+  text: string;
+  ago: string;
+  isUser?: boolean;
+};
+
+const TAICHU_BGM = "https://cdn.pixabay.com/download/audio/2022/03/15/audio_2c02b4e8f0.mp3?filename=cinematic-epic-trailer-116691.mp3";
+
+const TAICHU_SEED_COMMENTS: { h: string; t: string }[] = [
+  { h: "dc2_legend", t: "Bjirr cinematic-nya dapet banget! Sepuh emang gak pernah bohong 🔥" },
+  { h: "lord.anime", t: "Gokil sepuh editannya! Frame by frame juara 👑" },
+  { h: "yuraaa_", t: "Detik-detik Tai Chu keluar tuh part paling merinding riil 😭" },
+  { h: "miko_donghua", t: "Editnya level pro cok, backsound-nya nendang parah ☄️" },
+  { h: "rikowbu", t: "Rewatch 3x tetep merinding, kelas abangkuh! 🗿" },
+];
+
+function BotVideoPost({
+  bot,
+  onOpenBotProfile,
+  meName,
+  meHandle,
+  meColor,
+  meAvatar,
+  meVerified,
+}: {
+  bot: { name: string; handle: string; color: string; avatar: string; verified?: boolean };
+  onOpenBotProfile: (b: { name: string; handle: string; color: string; avatar: string; verified?: boolean }) => void;
+  meName: string;
+  meHandle: string;
+  meColor: string;
+  meAvatar?: string;
+  meVerified?: boolean;
+}) {
+  const vRef = useRef<HTMLVideoElement>(null);
+  const bgmRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [bgmOn, setBgmOn] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState(4821);
+  const [shares, setShares] = useState(612);
+  const [comments, setComments] = useState<VideoBotComment[]>(() => {
+    const base = Date.now();
+    return TAICHU_SEED_COMMENTS.map((c, i) => {
+      const b = BOT_POOL.find((x) => x.handle === c.h) ?? BOT_POOL[i % BOT_POOL.length];
+      return {
+        id: `tc_${b.handle}_${i}_${base}`,
+        name: b.name,
+        handle: b.handle,
+        color: b.color,
+        avatar: b.avatar,
+        text: c.t,
+        ago: `${i + 2}m`,
+      };
+    });
+  });
+  const [text, setText] = useState("");
+
+  // Dynamic counter drift while playing
+  useEffect(() => {
+    if (!playing) return;
+    const id = window.setInterval(() => {
+      setLikes((n) => n + Math.floor(Math.random() * 3));
+      setShares((n) => n + (Math.random() < 0.3 ? 1 : 0));
+    }, 2500);
+    return () => window.clearInterval(id);
+  }, [playing]);
+
+  const toggle = () => {
+    const v = vRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.muted = muted;
+      v.play().then(() => setPlaying(true)).catch(() => {
+        // fallback: autoplay policy — start muted
+        v.muted = true;
+        setMuted(true);
+        v.play().then(() => setPlaying(true)).catch(() => { /* ignore */ });
+      });
+      if (bgmOn && bgmRef.current) bgmRef.current.play().catch(() => { /* ignore */ });
+    } else {
+      v.pause();
+      setPlaying(false);
+      if (bgmRef.current) bgmRef.current.pause();
+    }
+  };
+
+  const toggleMute = () => {
+    const v = vRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setMuted(v.muted);
+  };
+
+  const toggleBgm = () => {
+    const a = bgmRef.current;
+    if (!a) return;
+    if (a.paused) {
+      a.volume = 0.35;
+      a.play().then(() => setBgmOn(true)).catch(() => { /* ignore */ });
+    } else {
+      a.pause();
+      setBgmOn(false);
+    }
+  };
+
+  const like = () => {
+    setLiked((v) => !v);
+    setLikes((n) => n + (liked ? -1 : 1));
+  };
+
+  const share = () => setShares((n) => n + 1);
+
+  const sendComment = () => {
+    const t = text.trim();
+    if (!t) return;
+    const c: VideoBotComment = {
+      id: `tc_me_${Date.now()}`,
+      name: meName,
+      handle: meHandle,
+      color: meColor,
+      avatar: meAvatar ?? botAvatar(meHandle),
+      text: t,
+      ago: "now",
+      isUser: true,
+    };
+    setComments((cs) => [c, ...cs]);
+    setText("");
+  };
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <div className="flex items-start gap-2">
+        <img src={bot.avatar} alt={bot.name} className="h-9 w-9 rounded-full object-cover" style={{ background: bot.color }} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1 text-xs">
+            <span className="font-bold text-white/95">{bot.name}</span>
+            {bot.verified && <VerifiedCheck size={12} />}
+            <span className="text-white/40">@{bot.handle} · 3j</span>
+          </div>
+          <p className="mt-1 text-sm text-white/90">
+            Detik-detik Tai Chu keluar dari Lei Zhen, gila sih ini editannya merinding parah! 🔥☄️{" "}
+            <span className="text-sky-400">#HeavenDefyingDragonforce </span>
+            <span className="text-sky-400">#TaiChu </span>
+            <span className="text-sky-400">#LeiZhen</span>
+          </p>
+
+          <div className="relative mt-2 overflow-hidden rounded-xl border border-white/10 bg-black">
+            <video
+              ref={vRef}
+              src={taichuVideo.url}
+              className="block w-full"
+              playsInline
+              preload="metadata"
+              onClick={toggle}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onEnded={() => setPlaying(false)}
+            />
+            <audio ref={bgmRef} src={TAICHU_BGM} loop preload="none" />
+            {!playing && (
+              <button
+                type="button"
+                onClick={toggle}
+                aria-label="Putar video"
+                className="absolute inset-0 grid place-items-center bg-black/30"
+              >
+                <span className="grid h-14 w-14 place-items-center rounded-full text-2xl font-black text-black" style={{ background: NEON, boxShadow: `0 0 24px ${NEON}80` }}>
+                  ▶
+                </span>
+              </button>
+            )}
+            <div className="absolute bottom-2 right-2 flex gap-1">
+              <button
+                type="button"
+                onClick={toggleMute}
+                className="rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold text-white/90"
+                aria-label={muted ? "Bunyikan" : "Bisukan"}
+              >
+                {muted ? "🔇" : "🔊"}
+              </button>
+              <button
+                type="button"
+                onClick={toggleBgm}
+                className="rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold text-white/90"
+                aria-label="Toggle backsound"
+              >
+                {bgmOn ? "🎵 BGM ON" : "🎵 BGM"}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-2 flex items-center gap-4 text-[11px] text-white/60">
+            <button onClick={like} className={`flex items-center gap-1 hover:text-pink-400 ${liked ? "text-pink-400" : ""}`}>
+              <span>{liked ? "❤️" : "🤍"}</span>
+              <span className="tabular-nums">{likes.toLocaleString("id-ID")}</span>
+            </button>
+            <span className="flex items-center gap-1">
+              <span>💬</span>
+              <span className="tabular-nums">{comments.length.toLocaleString("id-ID")}</span>
+            </span>
+            <button onClick={share} className="flex items-center gap-1 hover:text-sky-400">
+              <span>🔗</span>
+              <span className="tabular-nums">{shares.toLocaleString("id-ID")}</span>
+            </button>
+          </div>
+
+          {/* comment composer */}
+          <div className="mt-3 flex items-center gap-2 border-t border-white/5 pt-3">
+            {meAvatar ? (
+              <img src={meAvatar} alt={meName} className="h-7 w-7 rounded-full object-cover" style={{ background: meColor }} />
+            ) : (
+              <div className="grid h-7 w-7 place-items-center rounded-full text-[10px] font-black text-black" style={{ background: meColor }}>
+                {meName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") sendComment(); }}
+              placeholder="Tulis komentar untuk @saya_sukamieayam89..."
+              className="flex-1 rounded-md border border-white/10 bg-black/40 px-2 py-1.5 text-xs placeholder:text-white/30 focus:border-[color:var(--n)] focus:outline-none"
+              style={{ ["--n" as never]: NEON }}
+              maxLength={240}
+            />
+            <button
+              type="button"
+              onClick={sendComment}
+              className="rounded-md px-2 py-1.5 text-[10px] font-black text-black"
+              style={{ background: NEON }}
+            >
+              Kirim
+            </button>
+          </div>
+
+          <ul className="mt-3 space-y-3">
+            {comments.map((c) => (
+              <li key={c.id} className="flex items-start gap-2 animate-fade-in">
+                {c.isUser ? (
+                  <img src={c.avatar} alt={c.name} className="h-7 w-7 shrink-0 rounded-full object-cover" style={{ background: c.color }} />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onOpenBotProfile({ name: c.name, handle: c.handle, color: c.color, avatar: c.avatar })}
+                    className="shrink-0 rounded-full transition hover:opacity-80"
+                    aria-label={`Buka profil ${c.name}`}
+                  >
+                    <img src={c.avatar} alt={c.name} className="h-7 w-7 rounded-full object-cover" style={{ background: c.color }} />
+                  </button>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-1 text-[11px]">
+                    {c.isUser ? (
+                      <span className="font-bold text-white/90">{c.name}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onOpenBotProfile({ name: c.name, handle: c.handle, color: c.color, avatar: c.avatar })}
+                        className="font-bold text-white/90 hover:underline"
+                      >
+                        {c.name}
+                      </button>
+                    )}
+                    {c.isUser && meVerified && <VerifiedCheck size={10} />}
+                    <span className="text-white/40">@{c.handle} · {c.ago}</span>
+                    {c.isUser && <span className="rounded-sm bg-white/10 px-1 text-[8px] uppercase tracking-widest text-white/60">kamu</span>}
+                  </div>
+                  <p className="break-words text-xs text-white/80">{c.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BotProfileModal({
-  bot, onClose,
+  bot, onClose, onOpenBotProfile, meName, meHandle, meColor, meAvatar, meVerified,
 }: {
   bot: { name: string; handle: string; color: string; avatar: string; verified?: boolean };
   onClose: () => void;
+  onOpenBotProfile: (b: { name: string; handle: string; color: string; avatar: string; verified?: boolean }) => void;
+  meName: string;
+  meHandle: string;
+  meColor: string;
+  meAvatar?: string;
+  meVerified?: boolean;
 }) {
   const info = botProfileFor(bot);
   const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K` : n.toString();
+  const hasVideoTab = bot.handle === "saya_sukamieayam89";
+  const [tab, setTab] = useState<"profil" | "video">("profil");
   return (
     <div
-      className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-4 backdrop-blur animate-fade-in"
+      className="fixed inset-0 z-[60] grid place-items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#0a0d0b] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
+        className="my-6 w-full max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#0a0d0b] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative h-20" style={{ background: `linear-gradient(120deg, ${info.color}80, #000)` }}>
@@ -1391,19 +1706,56 @@ function BotProfileModal({
             <span><span className="font-black text-white">{fmt(info.following)}</span> <span className="text-white/50">Following</span></span>
             <span><span className="font-black text-white">{fmt(info.followers)}</span> <span className="text-white/50">Followers</span></span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="mt-4 w-full rounded-full py-2 text-xs font-black text-black"
-            style={{ background: NEON }}
-          >
-            Tutup Profil
-          </button>
+
+          {hasVideoTab && (
+            <div className="mt-4 flex gap-1 rounded-lg border border-white/10 bg-black/40 p-1 text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setTab("profil")}
+                className={`flex-1 rounded-md py-1.5 transition ${tab === "profil" ? "text-black" : "text-white/60"}`}
+                style={tab === "profil" ? { background: NEON } : undefined}
+              >
+                Profil
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("video")}
+                className={`flex-1 rounded-md py-1.5 transition ${tab === "video" ? "text-black" : "text-white/60"}`}
+                style={tab === "video" ? { background: NEON } : undefined}
+              >
+                Postingan Video
+              </button>
+            </div>
+          )}
+
+          {hasVideoTab && tab === "video" ? (
+            <div className="mt-4">
+              <BotVideoPost
+                bot={bot}
+                onOpenBotProfile={onOpenBotProfile}
+                meName={meName}
+                meHandle={meHandle}
+                meColor={meColor}
+                meAvatar={meAvatar}
+                meVerified={meVerified}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-4 w-full rounded-full py-2 text-xs font-black text-black"
+              style={{ background: NEON }}
+            >
+              Tutup Profil
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
 
 function CommentItem({
   postId, comment, onReply, onDeleteReply, onOpenBotProfile, meName, meHandle, meColor, meAvatar, meVerified,
@@ -2419,7 +2771,17 @@ function App({ session }: { session: Session }) {
       )}
 
       {botProfile && (
-        <BotProfileModal bot={botProfile} onClose={() => setBotProfile(null)} />
+        <BotProfileModal
+          bot={botProfile}
+          onClose={() => setBotProfile(null)}
+          onOpenBotProfile={setBotProfile}
+          meName={authorName}
+          meHandle={authorHandle}
+          meColor={meColor}
+          meAvatar={undefined}
+          meVerified={authorVerified}
+        />
+
       )}
 
       {/* Bottom Navigation */}
