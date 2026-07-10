@@ -7,6 +7,7 @@ import ep4 from "@/assets/ep4.mp4.asset.json";
 import ep5 from "@/assets/ep5.mp4.asset.json";
 import poster from "@/assets/hdd-poster.asset.json";
 import ep6Poster from "@/assets/ep6-akar-terlarang.jpg.asset.json";
+import taichuVideo from "@/assets/taichu-leizhen.mp4.asset.json";
 
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
