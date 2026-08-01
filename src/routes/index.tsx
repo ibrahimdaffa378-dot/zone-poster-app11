@@ -1810,6 +1810,7 @@ function BotProfileModal({
           <div className="mt-2 flex items-center gap-1">
             <h3 className="text-base font-black text-white">{info.name}</h3>
             {info.verified && <VerifiedCheck size={14} />}
+            {purple && <DevPurpleCheck size={14} title="Terverifikasi (1jt+ pengikut)" />}
           </div>
           <p className="text-xs text-white/50">@{info.handle}</p>
           <p className="mt-3 text-sm text-white/85">{info.bio}</p>
@@ -1819,8 +1820,38 @@ function BotProfileModal({
           </div>
           <div className="mt-3 flex items-center gap-4 text-xs">
             <span><span className="font-black text-white">{fmt(info.following)}</span> <span className="text-white/50">Following</span></span>
-            <span><span className="font-black text-white">{fmt(info.followers)}</span> <span className="text-white/50">Followers</span></span>
+            <span><span className="font-black text-white">{fmt(followers)}</span> <span className="text-white/50">Followers</span></span>
           </div>
+
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => social.toggleFollow(bot.handle)}
+              className="flex-1 rounded-full py-2 text-[11px] font-black transition"
+              style={following ? { background: "transparent", color: NEON, border: `1px solid ${NEON}` } : { background: NEON, color: "#000" }}
+            >
+              {following ? "Mengikuti ✓" : "Follow"}
+            </button>
+            <button
+              type="button"
+              onClick={() => social.toggleBlock(bot.handle)}
+              className={`flex-1 rounded-full border py-2 text-[11px] font-black transition ${
+                blocked ? "border-red-500 bg-red-500/20 text-red-300" : "border-white/20 text-white/70 hover:border-red-500/60 hover:text-red-300"
+              }`}
+            >
+              {blocked ? "Diblokir ✕" : "Block"}
+            </button>
+          </div>
+          {blocked && (
+            <p className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-[10px] text-red-300">
+              Postingan dan komentar akun ini disembunyikan dari feed kamu.
+            </p>
+          )}
+          {purple && (
+            <p className="mt-2 text-[10px] font-bold" style={{ color: "#a855f7" }}>
+              Akun ini telah melewati 1.000.000 pengikut — centang ungu aktif.
+            </p>
+          )}
 
           {hasVideoTab && (
             <div className="mt-4 flex gap-1 rounded-lg border border-white/10 bg-black/40 p-1 text-[11px] font-bold">
@@ -1856,14 +1887,29 @@ function BotProfileModal({
               />
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-4 w-full rounded-full py-2 text-xs font-black text-black"
-              style={{ background: NEON }}
-            >
-              Tutup Profil
-            </button>
+            <>
+              <div className="mt-4">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/40">Postingan</p>
+                <div className="grid grid-cols-3 gap-1">
+                  {gallery.map((g, i) => (
+                    <div key={i} className="group relative aspect-square overflow-hidden rounded-md border border-white/10">
+                      <img src={g.url} alt={g.caption} className="h-full w-full object-cover" loading="lazy" />
+                      <span className="absolute inset-x-0 bottom-0 line-clamp-2 bg-black/70 p-1 text-[8px] leading-tight text-white/80">
+                        {g.caption}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="mt-4 w-full rounded-full py-2 text-xs font-black text-black"
+                style={{ background: NEON }}
+              >
+                Tutup Profil
+              </button>
+            </>
           )}
         </div>
       </div>
