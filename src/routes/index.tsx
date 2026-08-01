@@ -2003,9 +2003,9 @@ function CommentItem({
           </div>
         )}
 
-        {comment.replies.length > 0 && (
+        {visibleReplies.length > 0 && (
           <ul className="mt-2 space-y-2 border-l border-white/10 pl-3">
-            {comment.replies.map((r) => (
+            {visibleReplies.map((r) => (
               <li key={r.id} className="flex items-start gap-2 animate-fade-in">
                 {r.isUser || r.typing ? (
                   r.avatar ? (
