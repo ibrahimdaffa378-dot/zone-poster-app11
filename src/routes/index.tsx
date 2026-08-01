@@ -1966,6 +1966,7 @@ function CommentItem({
           >
             {comment.name}
           </button>
+          <PurpleIfMillion handle={comment.handle} size={11} />
           <span className="text-white/40">@{comment.handle} · {comment.ago}</span>
         </div>
 
