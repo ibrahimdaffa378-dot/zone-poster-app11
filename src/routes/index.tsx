@@ -1932,6 +1932,8 @@ function CommentItem({
   meAvatar?: string;
   meVerified?: boolean;
 }) {
+  const social = useSocial();
+  const visibleReplies = comment.replies.filter((r) => r.isUser || r.typing || !social.isBlocked(r.handle));
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const send = () => {
