@@ -2175,6 +2175,7 @@ function CommunityFeed({
                     </button>
                   )}
                   {p.verified && <VerifiedCheck size={12} />}
+                  {!p.isMine && <PurpleIfMillion handle={p.handle} size={12} />}
                   <span className="text-white/40">@{p.handle}</span>
                   <span className="text-white/40">· {timeAgoShort(p.createdAt)}</span>
                   {p.isMine && (
