@@ -2358,6 +2358,24 @@ function App({ session }: { session: Session }) {
 
   const current = EPISODES[idx];
 
+  // ---- Video End Overlay ----
+  const [ended, setEnded] = useState(false);
+  useEffect(() => { setEnded(false); }, [idx]);
+  const replayEpisode = useCallback(() => {
+    setEnded(false);
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = 0;
+    v.play().catch(() => { /* ignore */ });
+  }, []);
+  const goToEpisode = useCallback((next: number) => {
+    if (next < 0 || next > EPISODES.length - 1) return;
+    setEnded(false);
+    setIdx(next);
+    setTime(0);
+    setTimeout(() => videoRef.current?.play().catch(() => { /* ignore */ }), 250);
+  }, []);
+
   // refresh time-ago labels
   useEffect(() => {
     const id = window.setInterval(() => setTick((t) => t + 1), 30_000);
@@ -2752,7 +2770,7 @@ function App({ session }: { session: Session }) {
               src={current.src}
               className="absolute inset-0 h-full w-full bg-black"
               onClick={togglePlay}
-              onPlay={() => setPlaying(true)}
+              onPlay={() => { setPlaying(true); setEnded(false); }}
               onPause={() => setPlaying(false)}
               onTimeUpdate={(e) => {
                 const v = e.currentTarget;
@@ -2761,16 +2779,75 @@ function App({ session }: { session: Session }) {
                   markEpisodeWatched(current.num);
                 }
               }}
-              onEnded={() => markEpisodeWatched(current.num)}
+              onEnded={() => { markEpisodeWatched(current.num); setEnded(true); setPlaying(false); }}
               onLoadedMetadata={(e) => setDur(e.currentTarget.duration)}
               playsInline
             />
-            {!playing && (
+            {!playing && !ended && (
               <button onClick={togglePlay} className="absolute inset-0 grid place-items-center bg-black/30 transition hover:bg-black/40" aria-label="Play">
                 <span className="grid h-16 w-16 place-items-center rounded-full text-black" style={{ background: NEON, boxShadow: `0 0 30px ${NEON}80` }}>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                 </span>
               </button>
+            )}
+
+            {/* Video End Overlay */}
+            {ended && (
+              <div className="absolute inset-0 grid place-items-center bg-black/75 backdrop-blur-sm animate-fade-in">
+                <div className="flex w-full items-center justify-center gap-4 px-4 sm:gap-8">
+                  <button
+                    type="button"
+                    onClick={() => goToEpisode(idx - 1)}
+                    disabled={idx === 0}
+                    className="group flex flex-col items-center gap-1 disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label="Episode sebelumnya"
+                  >
+                    <span
+                      className="grid h-11 w-11 place-items-center rounded-full border transition group-enabled:hover:scale-110"
+                      style={{ borderColor: `${NEON}66`, background: "rgba(0,0,0,0.6)", color: NEON, boxShadow: `0 0 14px ${NEON}33` }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 4.5 8 12l7.5 7.5V4.5z" /></svg>
+                    </span>
+                    <span className="text-[9px] uppercase tracking-widest text-white/60">Sebelumnya</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={replayEpisode}
+                    className="group flex flex-col items-center gap-1"
+                    aria-label="Putar ulang episode"
+                  >
+                    <span
+                      className="grid h-14 w-14 place-items-center rounded-full text-black transition group-hover:scale-110"
+                      style={{ background: NEON, boxShadow: `0 0 28px ${NEON}80` }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z" />
+                      </svg>
+                    </span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: NEON }}>Putar Ulang</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => goToEpisode(idx + 1)}
+                    disabled={idx >= EPISODES.length - 1}
+                    className="group flex flex-col items-center gap-1 disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label="Episode selanjutnya"
+                  >
+                    <span
+                      className="grid h-11 w-11 place-items-center rounded-full border transition group-enabled:hover:scale-110"
+                      style={{ borderColor: `${NEON}66`, background: "rgba(0,0,0,0.6)", color: NEON, boxShadow: `0 0 14px ${NEON}33` }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 4.5 16 12l-7.5 7.5V4.5z" /></svg>
+                    </span>
+                    <span className="text-[9px] uppercase tracking-widest text-white/60">Selanjutnya</span>
+                  </button>
+                </div>
+                <p className="absolute bottom-3 left-0 right-0 text-center text-[10px] uppercase tracking-[0.25em] text-white/40">
+                  Episode {current.num} selesai
+                </p>
+              </div>
             )}
           </div>
 
