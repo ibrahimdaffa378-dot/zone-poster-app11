@@ -2114,6 +2114,10 @@ function CommunityFeed({
     const id = window.setInterval(() => force((t) => t + 1), 5000);
     return () => window.clearInterval(id);
   }, []);
+  const social = useSocial();
+  const visiblePosts = posts
+    .filter((p) => p.isMine || !social.isBlocked(p.handle))
+    .map((p) => ({ ...p, comments: p.comments.filter((c) => !social.isBlocked(c.handle)) }));
 
   return (
     <>
@@ -2123,18 +2127,18 @@ function CommunityFeed({
             <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Zone Community</p>
             <h2 className="text-lg font-black">X Zone <span style={{ color: NEON }}>Feed</span></h2>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-white/40">{posts.length} post</span>
+          <span className="text-[10px] uppercase tracking-widest text-white/40">{visiblePosts.length} post</span>
         </div>
       </div>
 
-      {posts.length === 0 && (
+      {visiblePosts.length === 0 && (
         <div className="rounded-xl border border-dashed border-white/10 p-8 text-center text-xs text-white/50">
           Belum ada postingan. Tekan tombol <span style={{ color: NEON }}>+</span> di pojok kanan bawah untuk membuat postingan pertama.
         </div>
       )}
 
       <ul className="space-y-3">
-        {posts.map((p) => (
+        {visiblePosts.map((p) => (
           <li key={p.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
             <div className="flex items-start gap-2">
               {p.isMine ? (
