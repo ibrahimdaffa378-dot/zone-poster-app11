@@ -842,7 +842,7 @@ function botProfileFor(b: { name: string; handle: string; color: string; avatar:
   const bDay = 1 + ((seed >> 11) % 28);
   const bMonth = BULAN[(seed >> 13) % 12];
   const bYear = 1998 + ((seed >> 17) % 12); // 1998-2009
-  const followers = 800 + ((seed >> 5) % 48000);
+  const followers = baseFollowers(b.handle, seed);
   const following = 120 + ((seed >> 9) % 1800);
   return {
     name: b.name,
