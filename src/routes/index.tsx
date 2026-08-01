@@ -858,6 +858,115 @@ function botProfileFor(b: { name: string; handle: string; color: string; avatar:
   };
 }
 
+// ---- Followers base (Tio starts at 999.999 -> 1 follow = purple check) ----
+const FOLLOWERS_OVERRIDE: Record<string, number> = {
+  "tio.gg": 999999,
+};
+function baseFollowers(handle: string, seed?: number): number {
+  const o = FOLLOWERS_OVERRIDE[handle];
+  if (o != null) return o;
+  const s = seed ?? hashStr(handle);
+  return 800 + ((s >> 5) % 48000);
+}
+
+// ---- Mock gallery posts (public free images) ----
+const GALLERY_POOL: { url: string; caption: string }[] = [
+  { url: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&q=70&auto=format&fit=crop", caption: "Setup nonton donghua malam ini 🔥" },
+  { url: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600&q=70&auto=format&fit=crop", caption: "Vibes kota malam kayak opening anime 🌃" },
+  { url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&q=70&auto=format&fit=crop", caption: "Grinding Roblox sampe pagi 🎮" },
+  { url: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&q=70&auto=format&fit=crop", caption: "GG mabar bareng squad 🕹️" },
+  { url: "https://images.unsplash.com/photo-1601814933824-fd0b574dd592?w=600&q=70&auto=format&fit=crop", caption: "Cosplay-an favorit gua ✨" },
+  { url: "https://images.unsplash.com/photo-1618336753974-aae8e04506aa?w=600&q=70&auto=format&fit=crop", caption: "Koleksi figure nambah lagi 🗿" },
+  { url: "https://images.unsplash.com/photo-1633613286991-611fe299c4be?w=600&q=70&auto=format&fit=crop", caption: "Frame ini estetik parah 🎨" },
+  { url: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&q=70&auto=format&fit=crop", caption: "Retro gaming night 👾" },
+];
+function galleryFor(handle: string) {
+  const s = hashStr(handle);
+  const count = 3 + (s % 3); // 3-5
+  const start = s % GALLERY_POOL.length;
+  return Array.from({ length: count }, (_, i) => GALLERY_POOL[(start + i) % GALLERY_POOL.length]);
+}
+
+// ---- Social state (follow / block / purple verification) ----
+const SOCIAL_KEY = "zone_social_v1";
+type SocialState = {
+  isFollowing: (handle: string) => boolean;
+  isBlocked: (handle: string) => boolean;
+  toggleFollow: (handle: string) => void;
+  toggleBlock: (handle: string) => void;
+  followerCount: (handle: string) => number;
+  isPurple: (handle: string) => boolean;
+};
+const SocialCtx = createContext<SocialState | null>(null);
+function useSocial(): SocialState {
+  const ctx = useContext(SocialCtx);
+  if (ctx) return ctx;
+  return {
+    isFollowing: () => false,
+    isBlocked: () => false,
+    toggleFollow: () => {},
+    toggleBlock: () => {},
+    followerCount: (h) => baseFollowers(h),
+    isPurple: (h) => baseFollowers(h) >= 1_000_000,
+  };
+}
+function SocialProvider({ children }: { children: React.ReactNode }) {
+  const [following, setFollowing] = useState<Record<string, boolean>>({});
+  const [blocked, setBlocked] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SOCIAL_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { following?: Record<string, boolean>; blocked?: Record<string, boolean> };
+        if (parsed.following) setFollowing(parsed.following);
+        if (parsed.blocked) setBlocked(parsed.blocked);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const persist = useCallback((f: Record<string, boolean>, b: Record<string, boolean>) => {
+    try { localStorage.setItem(SOCIAL_KEY, JSON.stringify({ following: f, blocked: b })); } catch { /* ignore */ }
+  }, []);
+
+  const value = useMemo<SocialState>(() => {
+    const followerCount = (handle: string) => baseFollowers(handle) + (following[handle] ? 1 : 0);
+    return {
+      isFollowing: (h) => !!following[h],
+      isBlocked: (h) => !!blocked[h],
+      toggleFollow: (h) =>
+        setFollowing((prev) => {
+          const next = { ...prev, [h]: !prev[h] };
+          persist(next, blocked);
+          return next;
+        }),
+      toggleBlock: (h) =>
+        setBlocked((prev) => {
+          const next = { ...prev, [h]: !prev[h] };
+          persist(following, next);
+          return next;
+        }),
+      followerCount,
+      isPurple: (h) => followerCount(h) >= 1_000_000,
+    };
+  }, [following, blocked, persist]);
+
+  return <SocialCtx.Provider value={value}>{children}</SocialCtx.Provider>;
+}
+
+function fmtFollowers(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1).replace(/\.0$/, "")}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+  return n.toLocaleString("id-ID");
+}
+
+/** Purple check shown automatically when an account passes 1.000.000 followers. */
+function PurpleIfMillion({ handle, size = 12 }: { handle: string; size?: number }) {
+  const social = useSocial();
+  if (!social.isPurple(handle)) return null;
+  return <DevPurpleCheck size={size} title="Terverifikasi (1jt+ pengikut)" />;
+}
+
 // Keyword-based bot reply pools
 const REPLY_POOLS: { keys: RegExp; lines: string[] }[] = [
   // Pujian / scene keren
