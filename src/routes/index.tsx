@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import ep1 from "@/assets/ep1.mp4.asset.json";
 import ep2 from "@/assets/ep2.mp4.asset.json";
 import ep3 from "@/assets/ep3.mp4.asset.json";
@@ -842,7 +842,7 @@ function botProfileFor(b: { name: string; handle: string; color: string; avatar:
   const bDay = 1 + ((seed >> 11) % 28);
   const bMonth = BULAN[(seed >> 13) % 12];
   const bYear = 1998 + ((seed >> 17) % 12); // 1998-2009
-  const followers = 800 + ((seed >> 5) % 48000);
+  const followers = baseFollowers(b.handle, seed);
   const following = 120 + ((seed >> 9) % 1800);
   return {
     name: b.name,
@@ -856,6 +856,115 @@ function botProfileFor(b: { name: string; handle: string; color: string; avatar:
     followers,
     following,
   };
+}
+
+// ---- Followers base (Tio starts at 999.999 -> 1 follow = purple check) ----
+const FOLLOWERS_OVERRIDE: Record<string, number> = {
+  "tio.gg": 999999,
+};
+function baseFollowers(handle: string, seed?: number): number {
+  const o = FOLLOWERS_OVERRIDE[handle];
+  if (o != null) return o;
+  const s = seed ?? hashStr(handle);
+  return 800 + ((s >> 5) % 48000);
+}
+
+// ---- Mock gallery posts (public free images) ----
+const GALLERY_POOL: { url: string; caption: string }[] = [
+  { url: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&q=70&auto=format&fit=crop", caption: "Setup nonton donghua malam ini 🔥" },
+  { url: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600&q=70&auto=format&fit=crop", caption: "Vibes kota malam kayak opening anime 🌃" },
+  { url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&q=70&auto=format&fit=crop", caption: "Grinding Roblox sampe pagi 🎮" },
+  { url: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&q=70&auto=format&fit=crop", caption: "GG mabar bareng squad 🕹️" },
+  { url: "https://images.unsplash.com/photo-1601814933824-fd0b574dd592?w=600&q=70&auto=format&fit=crop", caption: "Cosplay-an favorit gua ✨" },
+  { url: "https://images.unsplash.com/photo-1618336753974-aae8e04506aa?w=600&q=70&auto=format&fit=crop", caption: "Koleksi figure nambah lagi 🗿" },
+  { url: "https://images.unsplash.com/photo-1633613286991-611fe299c4be?w=600&q=70&auto=format&fit=crop", caption: "Frame ini estetik parah 🎨" },
+  { url: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&q=70&auto=format&fit=crop", caption: "Retro gaming night 👾" },
+];
+function galleryFor(handle: string) {
+  const s = hashStr(handle);
+  const count = 3 + (s % 3); // 3-5
+  const start = s % GALLERY_POOL.length;
+  return Array.from({ length: count }, (_, i) => GALLERY_POOL[(start + i) % GALLERY_POOL.length]);
+}
+
+// ---- Social state (follow / block / purple verification) ----
+const SOCIAL_KEY = "zone_social_v1";
+type SocialState = {
+  isFollowing: (handle: string) => boolean;
+  isBlocked: (handle: string) => boolean;
+  toggleFollow: (handle: string) => void;
+  toggleBlock: (handle: string) => void;
+  followerCount: (handle: string) => number;
+  isPurple: (handle: string) => boolean;
+};
+const SocialCtx = createContext<SocialState | null>(null);
+function useSocial(): SocialState {
+  const ctx = useContext(SocialCtx);
+  if (ctx) return ctx;
+  return {
+    isFollowing: () => false,
+    isBlocked: () => false,
+    toggleFollow: () => {},
+    toggleBlock: () => {},
+    followerCount: (h) => baseFollowers(h),
+    isPurple: (h) => baseFollowers(h) >= 1_000_000,
+  };
+}
+function SocialProvider({ children }: { children: React.ReactNode }) {
+  const [following, setFollowing] = useState<Record<string, boolean>>({});
+  const [blocked, setBlocked] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SOCIAL_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { following?: Record<string, boolean>; blocked?: Record<string, boolean> };
+        if (parsed.following) setFollowing(parsed.following);
+        if (parsed.blocked) setBlocked(parsed.blocked);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const persist = useCallback((f: Record<string, boolean>, b: Record<string, boolean>) => {
+    try { localStorage.setItem(SOCIAL_KEY, JSON.stringify({ following: f, blocked: b })); } catch { /* ignore */ }
+  }, []);
+
+  const value = useMemo<SocialState>(() => {
+    const followerCount = (handle: string) => baseFollowers(handle) + (following[handle] ? 1 : 0);
+    return {
+      isFollowing: (h) => !!following[h],
+      isBlocked: (h) => !!blocked[h],
+      toggleFollow: (h) =>
+        setFollowing((prev) => {
+          const next = { ...prev, [h]: !prev[h] };
+          persist(next, blocked);
+          return next;
+        }),
+      toggleBlock: (h) =>
+        setBlocked((prev) => {
+          const next = { ...prev, [h]: !prev[h] };
+          persist(following, next);
+          return next;
+        }),
+      followerCount,
+      isPurple: (h) => followerCount(h) >= 1_000_000,
+    };
+  }, [following, blocked, persist]);
+
+  return <SocialCtx.Provider value={value}>{children}</SocialCtx.Provider>;
+}
+
+function fmtFollowers(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1).replace(/\.0$/, "")}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+  return n.toLocaleString("id-ID");
+}
+
+/** Purple check shown automatically when an account passes 1.000.000 followers. */
+function PurpleIfMillion({ handle, size = 12 }: { handle: string; size?: number }) {
+  const social = useSocial();
+  if (!social.isPurple(handle)) return null;
+  return <DevPurpleCheck size={size} title="Terverifikasi (1jt+ pengikut)" />;
 }
 
 // Keyword-based bot reply pools
@@ -1661,7 +1770,13 @@ function BotProfileModal({
   meVerified?: boolean;
 }) {
   const info = botProfileFor(bot);
-  const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K` : n.toString();
+  const social = useSocial();
+  const followers = social.followerCount(bot.handle);
+  const following = social.isFollowing(bot.handle);
+  const blocked = social.isBlocked(bot.handle);
+  const purple = social.isPurple(bot.handle);
+  const gallery = galleryFor(bot.handle);
+  const fmt = fmtFollowers;
   const hasVideoTab = bot.handle === "saya_sukamieayam89";
   const [tab, setTab] = useState<"profil" | "video">("profil");
   return (
@@ -1695,6 +1810,7 @@ function BotProfileModal({
           <div className="mt-2 flex items-center gap-1">
             <h3 className="text-base font-black text-white">{info.name}</h3>
             {info.verified && <VerifiedCheck size={14} />}
+            {purple && <DevPurpleCheck size={14} title="Terverifikasi (1jt+ pengikut)" />}
           </div>
           <p className="text-xs text-white/50">@{info.handle}</p>
           <p className="mt-3 text-sm text-white/85">{info.bio}</p>
@@ -1704,8 +1820,38 @@ function BotProfileModal({
           </div>
           <div className="mt-3 flex items-center gap-4 text-xs">
             <span><span className="font-black text-white">{fmt(info.following)}</span> <span className="text-white/50">Following</span></span>
-            <span><span className="font-black text-white">{fmt(info.followers)}</span> <span className="text-white/50">Followers</span></span>
+            <span><span className="font-black text-white">{fmt(followers)}</span> <span className="text-white/50">Followers</span></span>
           </div>
+
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => social.toggleFollow(bot.handle)}
+              className="flex-1 rounded-full py-2 text-[11px] font-black transition"
+              style={following ? { background: "transparent", color: NEON, border: `1px solid ${NEON}` } : { background: NEON, color: "#000" }}
+            >
+              {following ? "Mengikuti ✓" : "Follow"}
+            </button>
+            <button
+              type="button"
+              onClick={() => social.toggleBlock(bot.handle)}
+              className={`flex-1 rounded-full border py-2 text-[11px] font-black transition ${
+                blocked ? "border-red-500 bg-red-500/20 text-red-300" : "border-white/20 text-white/70 hover:border-red-500/60 hover:text-red-300"
+              }`}
+            >
+              {blocked ? "Diblokir ✕" : "Block"}
+            </button>
+          </div>
+          {blocked && (
+            <p className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-[10px] text-red-300">
+              Postingan dan komentar akun ini disembunyikan dari feed kamu.
+            </p>
+          )}
+          {purple && (
+            <p className="mt-2 text-[10px] font-bold" style={{ color: "#a855f7" }}>
+              Akun ini telah melewati 1.000.000 pengikut — centang ungu aktif.
+            </p>
+          )}
 
           {hasVideoTab && (
             <div className="mt-4 flex gap-1 rounded-lg border border-white/10 bg-black/40 p-1 text-[11px] font-bold">
@@ -1741,14 +1887,29 @@ function BotProfileModal({
               />
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-4 w-full rounded-full py-2 text-xs font-black text-black"
-              style={{ background: NEON }}
-            >
-              Tutup Profil
-            </button>
+            <>
+              <div className="mt-4">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/40">Postingan</p>
+                <div className="grid grid-cols-3 gap-1">
+                  {gallery.map((g, i) => (
+                    <div key={i} className="group relative aspect-square overflow-hidden rounded-md border border-white/10">
+                      <img src={g.url} alt={g.caption} className="h-full w-full object-cover" loading="lazy" />
+                      <span className="absolute inset-x-0 bottom-0 line-clamp-2 bg-black/70 p-1 text-[8px] leading-tight text-white/80">
+                        {g.caption}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="mt-4 w-full rounded-full py-2 text-xs font-black text-black"
+                style={{ background: NEON }}
+              >
+                Tutup Profil
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -1771,6 +1932,8 @@ function CommentItem({
   meAvatar?: string;
   meVerified?: boolean;
 }) {
+  const social = useSocial();
+  const visibleReplies = comment.replies.filter((r) => r.isUser || r.typing || !social.isBlocked(r.handle));
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const send = () => {
@@ -1805,6 +1968,7 @@ function CommentItem({
           >
             {comment.name}
           </button>
+          <PurpleIfMillion handle={comment.handle} size={11} />
           <span className="text-white/40">@{comment.handle} · {comment.ago}</span>
         </div>
 
@@ -1841,9 +2005,9 @@ function CommentItem({
           </div>
         )}
 
-        {comment.replies.length > 0 && (
+        {visibleReplies.length > 0 && (
           <ul className="mt-2 space-y-2 border-l border-white/10 pl-3">
-            {comment.replies.map((r) => (
+            {visibleReplies.map((r) => (
               <li key={r.id} className="flex items-start gap-2 animate-fade-in">
                 {r.isUser || r.typing ? (
                   r.avatar ? (
@@ -1889,6 +2053,7 @@ function CommentItem({
                       </button>
                     )}
                     {r.verified && <VerifiedCheck size={10} />}
+                    {!r.isUser && !r.typing && <PurpleIfMillion handle={r.handle} size={10} />}
                     <span className="text-white/40">@{r.handle} · {r.ago}</span>
                     {r.isUser && <span className="rounded-sm bg-white/10 px-1 text-[8px] uppercase tracking-widest text-white/60">kamu</span>}
                   </div>
@@ -1949,6 +2114,10 @@ function CommunityFeed({
     const id = window.setInterval(() => force((t) => t + 1), 5000);
     return () => window.clearInterval(id);
   }, []);
+  const social = useSocial();
+  const visiblePosts = posts
+    .filter((p) => p.isMine || !social.isBlocked(p.handle))
+    .map((p) => ({ ...p, comments: p.comments.filter((c) => !social.isBlocked(c.handle)) }));
 
   return (
     <>
@@ -1958,18 +2127,18 @@ function CommunityFeed({
             <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Zone Community</p>
             <h2 className="text-lg font-black">X Zone <span style={{ color: NEON }}>Feed</span></h2>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-white/40">{posts.length} post</span>
+          <span className="text-[10px] uppercase tracking-widest text-white/40">{visiblePosts.length} post</span>
         </div>
       </div>
 
-      {posts.length === 0 && (
+      {visiblePosts.length === 0 && (
         <div className="rounded-xl border border-dashed border-white/10 p-8 text-center text-xs text-white/50">
           Belum ada postingan. Tekan tombol <span style={{ color: NEON }}>+</span> di pojok kanan bawah untuk membuat postingan pertama.
         </div>
       )}
 
       <ul className="space-y-3">
-        {posts.map((p) => (
+        {visiblePosts.map((p) => (
           <li key={p.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
             <div className="flex items-start gap-2">
               {p.isMine ? (
@@ -2010,6 +2179,7 @@ function CommunityFeed({
                     </button>
                   )}
                   {p.verified && <VerifiedCheck size={12} />}
+                  {!p.isMine && <PurpleIfMillion handle={p.handle} size={12} />}
                   <span className="text-white/40">@{p.handle}</span>
                   <span className="text-white/40">· {timeAgoShort(p.createdAt)}</span>
                   {p.isMine && (
@@ -2121,7 +2291,11 @@ function Index() {
     return <LoginGate onSignedIn={() => { /* state updates via listener */ }} />;
   }
 
-  return <App session={session} />;
+  return (
+    <SocialProvider>
+      <App session={session} />
+    </SocialProvider>
+  );
 }
 
 function App({ session }: { session: Session }) {
