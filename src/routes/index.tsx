@@ -2291,7 +2291,11 @@ function Index() {
     return <LoginGate onSignedIn={() => { /* state updates via listener */ }} />;
   }
 
-  return <App session={session} />;
+  return (
+    <SocialProvider>
+      <App session={session} />
+    </SocialProvider>
+  );
 }
 
 function App({ session }: { session: Session }) {
