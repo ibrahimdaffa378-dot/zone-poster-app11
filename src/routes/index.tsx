@@ -2358,6 +2358,24 @@ function App({ session }: { session: Session }) {
 
   const current = EPISODES[idx];
 
+  // ---- Video End Overlay ----
+  const [ended, setEnded] = useState(false);
+  useEffect(() => { setEnded(false); }, [idx]);
+  const replayEpisode = useCallback(() => {
+    setEnded(false);
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = 0;
+    v.play().catch(() => { /* ignore */ });
+  }, []);
+  const goToEpisode = useCallback((next: number) => {
+    if (next < 0 || next > EPISODES.length - 1) return;
+    setEnded(false);
+    setIdx(next);
+    setTime(0);
+    setTimeout(() => videoRef.current?.play().catch(() => { /* ignore */ }), 250);
+  }, []);
+
   // refresh time-ago labels
   useEffect(() => {
     const id = window.setInterval(() => setTick((t) => t + 1), 30_000);
