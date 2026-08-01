@@ -1770,7 +1770,13 @@ function BotProfileModal({
   meVerified?: boolean;
 }) {
   const info = botProfileFor(bot);
-  const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K` : n.toString();
+  const social = useSocial();
+  const followers = social.followerCount(bot.handle);
+  const following = social.isFollowing(bot.handle);
+  const blocked = social.isBlocked(bot.handle);
+  const purple = social.isPurple(bot.handle);
+  const gallery = galleryFor(bot.handle);
+  const fmt = fmtFollowers;
   const hasVideoTab = bot.handle === "saya_sukamieayam89";
   const [tab, setTab] = useState<"profil" | "video">("profil");
   return (
