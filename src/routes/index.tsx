@@ -2051,6 +2051,7 @@ function CommentItem({
                       </button>
                     )}
                     {r.verified && <VerifiedCheck size={10} />}
+                    {!r.isUser && !r.typing && <PurpleIfMillion handle={r.handle} size={10} />}
                     <span className="text-white/40">@{r.handle} · {r.ago}</span>
                     {r.isUser && <span className="rounded-sm bg-white/10 px-1 text-[8px] uppercase tracking-widest text-white/60">kamu</span>}
                   </div>
