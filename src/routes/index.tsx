@@ -2645,27 +2645,43 @@ function App({ session }: { session: Session }) {
       if (ticks > 30) window.clearInterval(viralId);
     }, 700);
 
-    // Flood bot comments
-    let cticks = 0;
+    // Flood bot comments — nyambung dengan topik postingan
     const usedTexts = new Set<string>();
-    const commentId = window.setInterval(() => {
-      cticks += 1;
-      const bot = pickRandom(BOT_POOL);
-      let text = pickRandom(COMMENT_POOL);
+    const usedBots = new Set<string>();
+    const makeBotComment = (n: number): BotComment => {
+      let bot = pickRandom(BOT_POOL);
+      let bguard = 0;
+      while (usedBots.has(bot.handle) && bguard < 6) { bot = pickRandom(BOT_POOL); bguard++; }
+      usedBots.add(bot.handle);
+      let text = pickContextualPostComment(data.caption, data.hashtags);
       let guard = 0;
-      while (usedTexts.has(text) && guard < 5) { text = pickRandom(COMMENT_POOL); guard++; }
+      while (usedTexts.has(text) && guard < 6) { text = pickContextualPostComment(data.caption, data.hashtags); guard++; }
+      if (usedTexts.has(text)) {
+        text = pickRandom(COMMENT_POOL);
+      }
       usedTexts.add(text);
-      const comment: BotComment = {
+      return {
         id: randomId(),
         name: bot.name,
         handle: bot.handle,
         color: bot.color,
         avatar: bot.avatar,
         text,
-        ago: `${cticks}d`,
+        ago: `${n}d`,
         replies: [],
       };
-      setPosts((ps) => ps.map((p) => p.id === post.id ? { ...p, comments: [comment, ...p.comments] } : p));
+    };
+
+    const pushComment = (c: BotComment) =>
+      setPosts((ps) => ps.map((p) => p.id === post.id ? { ...p, comments: [c, ...p.comments] } : p));
+
+    // Balasan bot instan
+    pushComment(makeBotComment(0));
+
+    let cticks = 0;
+    const commentId = window.setInterval(() => {
+      cticks += 1;
+      pushComment(makeBotComment(cticks));
       if (cticks > 40) window.clearInterval(commentId);
     }, 450);
   };
