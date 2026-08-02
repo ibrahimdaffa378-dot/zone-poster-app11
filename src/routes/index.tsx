@@ -2232,14 +2232,40 @@ function CommunityFeed({
   return (
     <>
       <div className="sticky top-0 z-10 -mx-4 mb-3 border-b border-white/10 bg-[#0a0d0b]/90 px-4 py-3 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Zone Community</p>
             <h2 className="text-lg font-black">X Zone <span style={{ color: NEON }}>Feed</span></h2>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-white/40">{visiblePosts.length} post</span>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <button
+              type="button"
+              onClick={() => setShowSoon((v) => !v)}
+              className="group flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 transition hover:border-white/25"
+              aria-label="Coming Soon"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                <defs>
+                  <linearGradient id="soonGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={NEON} />
+                    <stop offset="100%" stopColor="#0a6b3d" />
+                  </linearGradient>
+                </defs>
+                <circle cx="12" cy="12" r="9.5" fill="none" stroke="url(#soonGrad)" strokeWidth="1.6" strokeDasharray="3.2 2.4" />
+                <path d="M12 7.4v5l3.2 1.9" fill="none" stroke={NEON} strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              <span className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: NEON }}>Coming Soon</span>
+            </button>
+            <span className="text-[10px] uppercase tracking-widest text-white/40">{visiblePosts.length} post</span>
+          </div>
         </div>
+        {showSoon && (
+          <p className="mt-2 rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-[10px] text-white/50">
+            Saat ini gaada serial baru.
+          </p>
+        )}
       </div>
+
 
       {visiblePosts.length === 0 && (
         <div className="rounded-xl border border-dashed border-white/10 p-8 text-center text-xs text-white/50">
