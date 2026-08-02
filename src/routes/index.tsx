@@ -1429,12 +1429,214 @@ const TOPIC_COMMENTS: Record<PostTopic, string[]> = {
   ],
 };
 
-function pickContextualPostComment(caption: string, hashtags: string[]): string {
-  const blob = `${caption} ${hashtags.join(" ")}`;
-  const topic = detectPostTopic(blob);
-  const pool = TOPIC_COMMENTS[topic];
-  return pool[Math.floor(Math.random() * pool.length)];
+// ================= Smart Mock LLM (client-side NLP) =================
+// Menganalisis seluruh kalimat: skor multi-topik, sentimen, intensitas,
+// pertanyaan, entitas -> lalu menyusun balasan (opini + reaksi entitas +
+// pertanyaan balik / penyemangat) supaya terasa seperti AI, bukan kata kunci kaku.
+
+type NlpAnalysis = {
+  topics: PostTopic[];
+  primary: PostTopic;
+  sentiment: "positif" | "negatif" | "netral";
+  isQuestion: boolean;
+  hype: number; // 0..3
+  entities: string[];
+  longPost: boolean;
+};
+
+const POSITIVE_RE = /(keren|mantap|gokil|bagus|suka|seneng|senang|hype|epic|top|jos|menyala|semangat|bangga|worth|smooth|best|👍|🔥|😍)/i;
+const NEGATIVE_RE = /(jelek|bosen|bosan|capek|lelah|sedih|galau|kesel|kesal|marah|gagal|error|lag|patah|nyerah|susah|males|mager|stress|stres|nangis|😭|💀)/i;
+const QUESTION_RE = /(\?|gimana|bagaimana|kenapa|kapan|dimana|di mana|siapa|apakah|bisa gak|bisa nggak|menurut (lu|kalian|kamu)|ada yang tau|rekomen)/i;
+
+const ENTITY_RULES: { label: string; re: RegExp }[] = [
+  { label: "Lei Zhen", re: /lei ?zhen/i },
+  { label: "Tai Chu", re: /tai ?chu/i },
+  { label: "Akar Terlarang", re: /akar terlarang/i },
+  { label: "Heaven Defying Dragonforce", re: /(hdd|heaven ?defying|dragonforce)/i },
+  { label: "Roblox", re: /(roblox|blox ?fruit)/i },
+  { label: "Mobile Legends", re: /(mobile ?legend|\bml\b|mlbb)/i },
+  { label: "Free Fire", re: /(free ?fire|\bff\b)/i },
+  { label: "Genshin", re: /genshin/i },
+  { label: "Minecraft", re: /minecraft/i },
+  { label: "coding", re: /(coding|ngoding|javascript|python|react|html|css|bug|program)/i },
+  { label: "editing", re: /(editing|after ?effect|premiere|render|capcut|blender)/i },
+];
+
+function analyzePost(text: string): NlpAnalysis {
+  const scored = POST_TOPIC_RULES.map((r) => {
+    const m = text.match(new RegExp(r.re.source, "gi"));
+    return { topic: r.topic, score: m ? m.length : 0 };
+  })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const topics = scored.map((s) => s.topic);
+  const pos = POSITIVE_RE.test(text);
+  const neg = NEGATIVE_RE.test(text);
+  const exclam = (text.match(/!/g) || []).length;
+  const caps = (text.match(/\b[A-Z]{3,}\b/g) || []).length;
+  const emo = (text.match(/[🔥😭💀😹🤣😂👑🗿]/gu) || []).length;
+
+  return {
+    topics,
+    primary: topics[0] ?? "generic",
+    sentiment: pos && !neg ? "positif" : neg && !pos ? "negatif" : pos && neg ? "netral" : "netral",
+    isQuestion: QUESTION_RE.test(text),
+    hype: Math.min(3, exclam + caps + Math.min(2, emo)),
+    entities: ENTITY_RULES.filter((e) => e.re.test(text)).map((e) => e.label).slice(0, 2),
+    longPost: text.trim().split(/\s+/).length > 18,
+  };
 }
+
+const OPENERS_POSITIF = ["Setuju banget", "Nah ini", "Bener sih", "Real no fake", "Gua sepemikiran"];
+const OPENERS_NEGATIF = ["Sabar dulu ngab", "Wajar sih", "Gua ngerti rasanya", "Pelan-pelan aja", "Sini gua temenin"];
+const OPENERS_NETRAL = ["Menarik nih", "Baru mikir gitu", "Oke oke", "Hmm gua baca dua kali", "Poin lu masuk"];
+
+const HYPE_TAIL = ["🔥🔥", "menyala abangkuh 🔥", "gass terus!", "kelas 👑"];
+
+const OPINI: Record<PostTopic, string[]> = {
+  hdd: [
+    "kekuatan HDD itu di timing scene-nya, bukan cuma efek",
+    "karakternya konsisten berkembang tiap episode, itu susah",
+    "atmosfernya kelam tapi rapih, ciri khas serial ini",
+  ],
+  game: [
+    "menurut gua yang bikin beda itu game sense, bukan cuma rank",
+    "meta boleh berubah, tapi jam terbang gak bisa dibohongin",
+    "mabar bareng orang sefrekuensi tuh jauh lebih enak dari solo",
+  ],
+  anime: [
+    "animasi bagus itu 70% timing dan spacing, sisanya polish",
+    "frame drop dikit gak masalah kalo storyboard-nya kuat",
+    "gaya lokal sekarang udah punya identitas sendiri, gak niru mentah",
+  ],
+  musik: [
+    "scoring itu setengah nyawa dari sebuah scene",
+    "lagu yang pas bisa naikin emosi tanpa nambah dialog",
+    "selera musik lu kayaknya bagus buat bikin AMV",
+  ],
+  makanan: [
+    "makan enak itu bagian dari self reward yang sah",
+    "porsi + harga masih ngalahin estetika, wkwk",
+    "kombinasi murah tapi nampol tuh susah dicari",
+  ],
+  sekolah: [
+    "produktif itu soal ritme, bukan lama-lamaan duduk",
+    "istirahat 10 menit sering nyelametin 2 jam kerja",
+    "tugas numpuk biasanya cuma keliatan gede di kepala",
+  ],
+  olahraga: [
+    "konsistensi kalahin intensitas, tiap kali",
+    "progres kecil tiap hari itu compound effect",
+    "gerak dikit tiap hari lebih bener dari all out sekali",
+  ],
+  teknologi: [
+    "spek penting, tapi workflow yang rapih lebih ngefek",
+    "tools gratisan sekarang udah cukup buat karya serius",
+    "bug itu guru paling nyebelin tapi paling ngajarin",
+  ],
+  curhat: [
+    "gak semua hari harus produktif, itu manusiawi",
+    "cerita ke orang lain tuh udah setengah selesai masalahnya",
+    "lu bukan sendiri di feed ini, banyak yang relate",
+  ],
+  meme: [
+    "receh terstruktur tuh seni tersendiri",
+    "konten sehat kayak gini yang bikin feed gak toxic",
+    "timing jokes lu bagus, itu yang bikin kena",
+  ],
+  generic: [
+    "kadang postingan simpel malah yang paling relate",
+    "gua suka feed yang jujur kayak gini",
+    "isi feed kayak gini yang bikin komunitas hidup",
+  ],
+};
+
+const TANYA_BALIK: Record<PostTopic, string[]> = {
+  hdd: ["Menurut lu Tai Chu bakal jadi sekutu apa musuh?", "Episode favorit lu yang mana sih?", "Prediksi lu buat Akar Terlarang gimana?"],
+  game: ["Lu main di server apa? gua ikut", "Build/loadout lu apa sekarang?", "Jam berapa biasanya online?"],
+  anime: ["Ada rekomen judul dengan vibes mirip?", "Lu lebih milih art style atau story?", "Bagian mana yang paling nempel di lu?"],
+  musik: ["Judul lagunya apa? mau gua save", "Playlist lu isinya genre apa aja?", "Cocok gak buat backsound scene epic?"],
+  makanan: ["Lokasinya di mana ngab?", "Habis berapa buat seporsi?", "Level pedes lu berapa biasanya?"],
+  sekolah: ["Deadline lu kapan?", "Belajar bareng gak? biar gak mager", "Mata pelajaran mana yang paling bikin pusing?"],
+  olahraga: ["Rutin berapa kali seminggu?", "Ada jadwal main lagi? gua ikut", "Target lu apa bulan ini?"],
+  teknologi: ["Spek lengkapnya apa?", "Pake tools apa buat ngerjainnya?", "Error-nya di bagian mana? mungkin gua pernah kena"],
+  curhat: ["Udah sempet istirahat belum hari ini?", "Mau cerita lebih lanjut? gua baca kok", "Ada yang bisa dibantu gak?"],
+  meme: ["Ini bikin sendiri apa nemu?", "Ada versi lanjutannya gak? 😹", "Boleh gua repost gak?"],
+  generic: ["Ceritain lebih detail dong", "Menurut lu langkah selanjutnya apa?", "Ada rencana bikin part 2?"],
+};
+
+const PENYEMANGAT = [
+  "Keep going ya, komunitas Zone dukung 🤝",
+  "Semangat bang, jangan berhenti di sini 🔥",
+  "Lanjut posting, gua pantengin terus 👀",
+  "Respect buat effort-nya 👏",
+];
+
+function entityLine(e: string): string {
+  const map: Record<string, string[]> = {
+    "Lei Zhen": ["Lei Zhen makin sangar aja tiap arc", "karakter Lei Zhen tuh growth-nya kerasa"],
+    "Tai Chu": ["Tai Chu tuh wildcard paling bahaya di serial ini", "power Tai Chu masih misterius banget"],
+    "Akar Terlarang": ["Akar Terlarang kayaknya bakal jadi turning point", "hype gua buat Akar Terlarang gak ketahan"],
+    "Heaven Defying Dragonforce": ["HDD tuh standar baru animasi lokal", "HDD konsisten naik kualitas dari eps 1"],
+    Roblox: ["Roblox tuh gak ada matinya buat mabar", "grinding di Roblox emang bikin lupa waktu"],
+    "Mobile Legends": ["ML mah tergantung tim, sedih tapi nyata", "di ML mental lebih penting dari mekanik"],
+    "Free Fire": ["FF masih rame parah lobinya", "aim di FF tuh soal refleks doang"],
+    Genshin: ["Genshin bikin dompet dan waktu abis bareng", "eksplor di Genshin paling nyenengin"],
+    Minecraft: ["Minecraft tuh kanvas tanpa batas", "build di Minecraft bisa jadi latihan komposisi loh"],
+    coding: ["ngoding tuh 10% nulis 90% nyari typo", "bug ilang sendiri itu red flag wkwk"],
+    editing: ["editing rapih bisa naikin kualitas 2 kali", "transisi halus tuh detail yang sering dilupain"],
+  };
+  return pick(map[e] ?? ["ini relate banget sama gua"]);
+}
+
+function smartBotReply(text: string): string {
+  const a = analyzePost(text);
+  const opener =
+    a.sentiment === "positif" ? pick(OPENERS_POSITIF)
+    : a.sentiment === "negatif" ? pick(OPENERS_NEGATIF)
+    : pick(OPENERS_NETRAL);
+
+  const parts: string[] = [];
+  parts.push(`${opener},`);
+
+  if (a.entities.length && Math.random() < 0.85) {
+    parts.push(`${entityLine(a.entities[0])}.`);
+  } else {
+    parts.push(`${pick(OPINI[a.primary])}.`);
+  }
+
+  // Topik sekunder biar terasa "baca semua kalimat"
+  if (a.topics.length > 1 && Math.random() < 0.5) {
+    parts.push(`Btw soal ${a.topics[1]}, ${pick(OPINI[a.topics[1]])}.`);
+  } else if (a.longPost && Math.random() < 0.5) {
+    parts.push(`Gua baca full sampe habis btw, ${pick(OPINI[a.primary])}.`);
+  }
+
+  if (a.isQuestion) {
+    parts.push(pick(TANYA_BALIK[a.primary]));
+  } else if (a.sentiment === "negatif") {
+    parts.push(pick(PENYEMANGAT));
+  } else if (Math.random() < 0.6) {
+    parts.push(pick(TANYA_BALIK[a.primary]));
+  } else {
+    parts.push(pick(PENYEMANGAT));
+  }
+
+  if (a.hype >= 2) parts.push(pick(HYPE_TAIL));
+
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
+function pickContextualPostComment(caption: string, hashtags: string[]): string {
+  const blob = `${caption} ${hashtags.join(" ")}`.trim();
+  if (!blob) return pick(TOPIC_COMMENTS.generic);
+  // 85% pakai smart mock LLM, 15% pool lama biar variasi tetap natural
+  if (Math.random() < 0.85) return smartBotReply(blob);
+  const topic = detectPostTopic(blob);
+  return pick(TOPIC_COMMENTS[topic]);
+}
+
 
 function pickRandom<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function randomId() { return Math.random().toString(36).slice(2, 10); }
