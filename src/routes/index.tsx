@@ -2229,6 +2229,8 @@ function CommunityFeed({
     .filter((p) => p.isMine || !social.isBlocked(p.handle))
     .map((p) => ({ ...p, comments: p.comments.filter((c) => !social.isBlocked(c.handle)) }));
 
+  const [showSoon, setShowSoon] = useState(false);
+
   return (
     <>
       <div className="sticky top-0 z-10 -mx-4 mb-3 border-b border-white/10 bg-[#0a0d0b]/90 px-4 py-3 backdrop-blur">
