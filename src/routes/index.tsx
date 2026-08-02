@@ -1326,6 +1326,116 @@ const COMMENT_POOL: string[] = [
   "Kualitas 4K, ceritanya 8K, mantap bang keep it up!",
 ];
 
+// ---- Komentar bot kontekstual berdasarkan kata kunci postingan ----
+type PostTopic =
+  | "game" | "anime" | "hdd" | "meme" | "musik" | "makanan"
+  | "sekolah" | "olahraga" | "teknologi" | "curhat" | "generic";
+
+const POST_TOPIC_RULES: { topic: PostTopic; re: RegExp }[] = [
+  { topic: "hdd", re: /(hdd|heaven|dragonforce|lei ?zhen|tai ?chu|akar terlarang|eps ?\d|episode|stickman|naga)/i },
+  { topic: "game", re: /(game|mabar|blox|fruit|roblox|mobile ?legend|\bml\b|\bff\b|free ?fire|valo|pubg|genshin|rank|push|noob|gacha|minecraft)/i },
+  { topic: "anime", re: /(anime|donghua|animasi|animation|manga|manhwa|otaku|waifu|frame|render|animator|opening|amv)/i },
+  { topic: "musik", re: /(lagu|musik|music|spotify|playlist|backsound|bgm|band|rap|beat)/i },
+  { topic: "makanan", re: /(makan|mie|bakso|nasi|kopi|ngopi|seblak|seblak|jajan|laper|kuliner|ayam)/i },
+  { topic: "sekolah", re: /(sekolah|kuliah|tugas|ujian|pr\b|guru|dosen|skripsi|kelas|belajar)/i },
+  { topic: "olahraga", re: /(bola|futsal|gym|olahraga|lari|badminton|timnas|sepak)/i },
+  { topic: "teknologi", re: /(hp\b|laptop|pc\b|coding|ai\b|aplikasi|app|android|iphone|spek|ram)/i },
+  { topic: "curhat", re: /(capek|sedih|galau|bosen|stress|stres|mager|overthinking|sendiri|nangis)/i },
+  { topic: "meme", re: /(wkwk|lucu|meme|ngakak|receh|awikwok|garing|😹|🤣|😂)/i },
+];
+
+function detectPostTopic(text: string): PostTopic {
+  for (const r of POST_TOPIC_RULES) if (r.re.test(text)) return r.topic;
+  return "generic";
+}
+
+const TOPIC_COMMENTS: Record<PostTopic, string[]> = {
+  hdd: [
+    "Gilaa part naganya bikin merinding, HDD emang beda kelas 🔥",
+    "Lei Zhen makin sangar aja tiap episode, gas eps selanjutnya bang!",
+    "Tai Chu tuh kayak power spare yang gak masuk akal, tapi keren 😭",
+    "Akar Terlarang plot twist-nya kayaknya bakal gede nih, siap-siap war di komen 🗿",
+    "Nonton HDD dari eps 1 gak pernah skip, respect buat animatornya 👑",
+  ],
+  game: [
+    "Mabar bang! gua stuck rank mulu nih butuh carry 😹",
+    "Setuju, meta sekarang bikin pusing. Build lu apa cuy?",
+    "Wkwk relate, tiap push rank malah ketemu tim yang AFK 💀",
+    "Grindingnya berapa jam tuh sampe dapet segitu? sepuh asli",
+    "Kalo main malem gua ikut, tag gua ya jangan lupa 🎮",
+  ],
+  anime: [
+    "Framerate-nya smooth banget sih, animator lokal udah level bilibili 🔥",
+    "Sceneflow-nya rapih, transisi antar cut-nya enak dilihat 👀",
+    "Setuju, animasi bagus itu bukan cuma render tapi timing-nya juga",
+    "Rekomen dong anime/donghua lain yang vibes-nya mirip gini 🙏",
+    "Ini tuh definisi kualitas > kuantitas, keep it up bang!",
+  ],
+  musik: [
+    "Backsound-nya nendang parah, judulnya apa cuy? mau gua save 🎧",
+    "Playlist lu selera dewa sih, auto masuk daftar gua",
+    "Beat-nya cocok banget buat scene epic, mantap pilihannya 🔥",
+    "Aku loop lagu ini seharian sumpah, gak bosen 😭",
+    "Bagi link spotify-nya dong ngab 🙏",
+  ],
+  makanan: [
+    "Njir jam segini posting makanan, laper gua 😭🍜",
+    "Traktir dong bang, gua bawa sambel sendiri wkwk",
+    "Recomend tempatnya di mana? mau mampir nih 🤤",
+    "Kombinasi paling bener nih, apalagi kalo pas cuaca dingin",
+    "Kalori naik tapi mood juga naik, worth it lah 😹",
+  ],
+  sekolah: [
+    "Sama bang, tugas numpuk tapi tetep sempet buka feed 💀",
+    "Semangat! deadline itu cuma ujian mental wkwk",
+    "Gua juga nunda tugas demi nonton, fix satu frekuensi 😹",
+    "Belajar bareng yuk, biar gak mager sendirian 📚",
+    "Jangan lupa istirahat ngab, otak butuh cooldown juga",
+  ],
+  olahraga: [
+    "Gas olahraga bareng, gua butuh partner biar konsisten 💪",
+    "Fisik naik, mental naik. Respect yang rutin gerak!",
+    "Wkwk gua sih semangat cuma di hari pertama doang 😹",
+    "Ikutan dong kalo ada jadwal main lagi 🔥",
+    "Jangan lupa pemanasan bang, ntar cedera repot",
+  ],
+  teknologi: [
+    "Spek segitu udah kenceng sih buat editing/animasi 🔥",
+    "Setuju, software gratisan sekarang udah gila kualitasnya",
+    "Bagi tips settingannya dong, punya gua sering lag 😭",
+    "Ini nih yang bikin karya lokal makin gampang jadi, gasss",
+    "Beli di mana ngab? mau upgrade juga nih 👀",
+  ],
+  curhat: [
+    "Pelan-pelan aja ngab, gak semua harus selesai hari ini 🤝",
+    "Relate parah. Istirahat dulu, feed-nya nungguin kok",
+    "Semangat bang, banyak yang diem-diem dukung lu 🔥",
+    "Sini cerita, komunitas Zone siap dengerin 😌",
+    "Sehat-sehat ya, jangan lupa makan dan tidur cukup 🙏",
+  ],
+  meme: [
+    "WKWKWK receh tapi kena 😹😹",
+    "Ngakak gua, langsung save buat stok story 🗿",
+    "Definisi konten sehat, gak ada mikirnya 🤣",
+    "Bang ini masuk FYP nih, fix viral",
+    "Komedinya tepat sasaran, respect 👏",
+  ],
+  generic: [
+    "Menyala abangkuh 🔥 lanjut posting terus!",
+    "Setuju sih, tinggal eksekusi aja pasti rame 🤝",
+    "Gua ikut ramein komen ya, semangat komunitas Zone 🗿",
+    "First! wkwk mantap kontennya bang",
+    "Bahas lebih lengkap dong, penasaran gua 👀",
+  ],
+};
+
+function pickContextualPostComment(caption: string, hashtags: string[]): string {
+  const blob = `${caption} ${hashtags.join(" ")}`;
+  const topic = detectPostTopic(blob);
+  const pool = TOPIC_COMMENTS[topic];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function pickRandom<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function randomId() { return Math.random().toString(36).slice(2, 10); }
 
@@ -2119,17 +2229,45 @@ function CommunityFeed({
     .filter((p) => p.isMine || !social.isBlocked(p.handle))
     .map((p) => ({ ...p, comments: p.comments.filter((c) => !social.isBlocked(c.handle)) }));
 
+  const [showSoon, setShowSoon] = useState(false);
+
   return (
     <>
       <div className="sticky top-0 z-10 -mx-4 mb-3 border-b border-white/10 bg-[#0a0d0b]/90 px-4 py-3 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Zone Community</p>
             <h2 className="text-lg font-black">X Zone <span style={{ color: NEON }}>Feed</span></h2>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-white/40">{visiblePosts.length} post</span>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <button
+              type="button"
+              onClick={() => setShowSoon((v) => !v)}
+              className="group flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 transition hover:border-white/25"
+              aria-label="Coming Soon"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                <defs>
+                  <linearGradient id="soonGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={NEON} />
+                    <stop offset="100%" stopColor="#0a6b3d" />
+                  </linearGradient>
+                </defs>
+                <circle cx="12" cy="12" r="9.5" fill="none" stroke="url(#soonGrad)" strokeWidth="1.6" strokeDasharray="3.2 2.4" />
+                <path d="M12 7.4v5l3.2 1.9" fill="none" stroke={NEON} strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              <span className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: NEON }}>Coming Soon</span>
+            </button>
+            <span className="text-[10px] uppercase tracking-widest text-white/40">{visiblePosts.length} post</span>
+          </div>
         </div>
+        {showSoon && (
+          <p className="mt-2 rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-[10px] text-white/50">
+            Saat ini gaada serial baru.
+          </p>
+        )}
       </div>
+
 
       {visiblePosts.length === 0 && (
         <div className="rounded-xl border border-dashed border-white/10 p-8 text-center text-xs text-white/50">
@@ -2535,27 +2673,43 @@ function App({ session }: { session: Session }) {
       if (ticks > 30) window.clearInterval(viralId);
     }, 700);
 
-    // Flood bot comments
-    let cticks = 0;
+    // Flood bot comments — nyambung dengan topik postingan
     const usedTexts = new Set<string>();
-    const commentId = window.setInterval(() => {
-      cticks += 1;
-      const bot = pickRandom(BOT_POOL);
-      let text = pickRandom(COMMENT_POOL);
+    const usedBots = new Set<string>();
+    const makeBotComment = (n: number): BotComment => {
+      let bot = pickRandom(BOT_POOL);
+      let bguard = 0;
+      while (usedBots.has(bot.handle) && bguard < 6) { bot = pickRandom(BOT_POOL); bguard++; }
+      usedBots.add(bot.handle);
+      let text = pickContextualPostComment(data.caption, data.hashtags);
       let guard = 0;
-      while (usedTexts.has(text) && guard < 5) { text = pickRandom(COMMENT_POOL); guard++; }
+      while (usedTexts.has(text) && guard < 6) { text = pickContextualPostComment(data.caption, data.hashtags); guard++; }
+      if (usedTexts.has(text)) {
+        text = pickRandom(COMMENT_POOL);
+      }
       usedTexts.add(text);
-      const comment: BotComment = {
+      return {
         id: randomId(),
         name: bot.name,
         handle: bot.handle,
         color: bot.color,
         avatar: bot.avatar,
         text,
-        ago: `${cticks}d`,
+        ago: `${n}d`,
         replies: [],
       };
-      setPosts((ps) => ps.map((p) => p.id === post.id ? { ...p, comments: [comment, ...p.comments] } : p));
+    };
+
+    const pushComment = (c: BotComment) =>
+      setPosts((ps) => ps.map((p) => p.id === post.id ? { ...p, comments: [c, ...p.comments] } : p));
+
+    // Balasan bot instan
+    pushComment(makeBotComment(0));
+
+    let cticks = 0;
+    const commentId = window.setInterval(() => {
+      cticks += 1;
+      pushComment(makeBotComment(cticks));
       if (cticks > 40) window.clearInterval(commentId);
     }, 450);
   };
