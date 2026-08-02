@@ -1326,6 +1326,116 @@ const COMMENT_POOL: string[] = [
   "Kualitas 4K, ceritanya 8K, mantap bang keep it up!",
 ];
 
+// ---- Komentar bot kontekstual berdasarkan kata kunci postingan ----
+type PostTopic =
+  | "game" | "anime" | "hdd" | "meme" | "musik" | "makanan"
+  | "sekolah" | "olahraga" | "teknologi" | "curhat" | "generic";
+
+const POST_TOPIC_RULES: { topic: PostTopic; re: RegExp }[] = [
+  { topic: "hdd", re: /(hdd|heaven|dragonforce|lei ?zhen|tai ?chu|akar terlarang|eps ?\d|episode|stickman|naga)/i },
+  { topic: "game", re: /(game|mabar|blox|fruit|roblox|mobile ?legend|\bml\b|\bff\b|free ?fire|valo|pubg|genshin|rank|push|noob|gacha|minecraft)/i },
+  { topic: "anime", re: /(anime|donghua|animasi|animation|manga|manhwa|otaku|waifu|frame|render|animator|opening|amv)/i },
+  { topic: "musik", re: /(lagu|musik|music|spotify|playlist|backsound|bgm|band|rap|beat)/i },
+  { topic: "makanan", re: /(makan|mie|bakso|nasi|kopi|ngopi|seblak|seblak|jajan|laper|kuliner|ayam)/i },
+  { topic: "sekolah", re: /(sekolah|kuliah|tugas|ujian|pr\b|guru|dosen|skripsi|kelas|belajar)/i },
+  { topic: "olahraga", re: /(bola|futsal|gym|olahraga|lari|badminton|timnas|sepak)/i },
+  { topic: "teknologi", re: /(hp\b|laptop|pc\b|coding|ai\b|aplikasi|app|android|iphone|spek|ram)/i },
+  { topic: "curhat", re: /(capek|sedih|galau|bosen|stress|stres|mager|overthinking|sendiri|nangis)/i },
+  { topic: "meme", re: /(wkwk|lucu|meme|ngakak|receh|awikwok|garing|😹|🤣|😂)/i },
+];
+
+function detectPostTopic(text: string): PostTopic {
+  for (const r of POST_TOPIC_RULES) if (r.re.test(text)) return r.topic;
+  return "generic";
+}
+
+const TOPIC_COMMENTS: Record<PostTopic, string[]> = {
+  hdd: [
+    "Gilaa part naganya bikin merinding, HDD emang beda kelas 🔥",
+    "Lei Zhen makin sangar aja tiap episode, gas eps selanjutnya bang!",
+    "Tai Chu tuh kayak power spare yang gak masuk akal, tapi keren 😭",
+    "Akar Terlarang plot twist-nya kayaknya bakal gede nih, siap-siap war di komen 🗿",
+    "Nonton HDD dari eps 1 gak pernah skip, respect buat animatornya 👑",
+  ],
+  game: [
+    "Mabar bang! gua stuck rank mulu nih butuh carry 😹",
+    "Setuju, meta sekarang bikin pusing. Build lu apa cuy?",
+    "Wkwk relate, tiap push rank malah ketemu tim yang AFK 💀",
+    "Grindingnya berapa jam tuh sampe dapet segitu? sepuh asli",
+    "Kalo main malem gua ikut, tag gua ya jangan lupa 🎮",
+  ],
+  anime: [
+    "Framerate-nya smooth banget sih, animator lokal udah level bilibili 🔥",
+    "Sceneflow-nya rapih, transisi antar cut-nya enak dilihat 👀",
+    "Setuju, animasi bagus itu bukan cuma render tapi timing-nya juga",
+    "Rekomen dong anime/donghua lain yang vibes-nya mirip gini 🙏",
+    "Ini tuh definisi kualitas > kuantitas, keep it up bang!",
+  ],
+  musik: [
+    "Backsound-nya nendang parah, judulnya apa cuy? mau gua save 🎧",
+    "Playlist lu selera dewa sih, auto masuk daftar gua",
+    "Beat-nya cocok banget buat scene epic, mantap pilihannya 🔥",
+    "Aku loop lagu ini seharian sumpah, gak bosen 😭",
+    "Bagi link spotify-nya dong ngab 🙏",
+  ],
+  makanan: [
+    "Njir jam segini posting makanan, laper gua 😭🍜",
+    "Traktir dong bang, gua bawa sambel sendiri wkwk",
+    "Recomend tempatnya di mana? mau mampir nih 🤤",
+    "Kombinasi paling bener nih, apalagi kalo pas cuaca dingin",
+    "Kalori naik tapi mood juga naik, worth it lah 😹",
+  ],
+  sekolah: [
+    "Sama bang, tugas numpuk tapi tetep sempet buka feed 💀",
+    "Semangat! deadline itu cuma ujian mental wkwk",
+    "Gua juga nunda tugas demi nonton, fix satu frekuensi 😹",
+    "Belajar bareng yuk, biar gak mager sendirian 📚",
+    "Jangan lupa istirahat ngab, otak butuh cooldown juga",
+  ],
+  olahraga: [
+    "Gas olahraga bareng, gua butuh partner biar konsisten 💪",
+    "Fisik naik, mental naik. Respect yang rutin gerak!",
+    "Wkwk gua sih semangat cuma di hari pertama doang 😹",
+    "Ikutan dong kalo ada jadwal main lagi 🔥",
+    "Jangan lupa pemanasan bang, ntar cedera repot",
+  ],
+  teknologi: [
+    "Spek segitu udah kenceng sih buat editing/animasi 🔥",
+    "Setuju, software gratisan sekarang udah gila kualitasnya",
+    "Bagi tips settingannya dong, punya gua sering lag 😭",
+    "Ini nih yang bikin karya lokal makin gampang jadi, gasss",
+    "Beli di mana ngab? mau upgrade juga nih 👀",
+  ],
+  curhat: [
+    "Pelan-pelan aja ngab, gak semua harus selesai hari ini 🤝",
+    "Relate parah. Istirahat dulu, feed-nya nungguin kok",
+    "Semangat bang, banyak yang diem-diem dukung lu 🔥",
+    "Sini cerita, komunitas Zone siap dengerin 😌",
+    "Sehat-sehat ya, jangan lupa makan dan tidur cukup 🙏",
+  ],
+  meme: [
+    "WKWKWK receh tapi kena 😹😹",
+    "Ngakak gua, langsung save buat stok story 🗿",
+    "Definisi konten sehat, gak ada mikirnya 🤣",
+    "Bang ini masuk FYP nih, fix viral",
+    "Komedinya tepat sasaran, respect 👏",
+  ],
+  generic: [
+    "Menyala abangkuh 🔥 lanjut posting terus!",
+    "Setuju sih, tinggal eksekusi aja pasti rame 🤝",
+    "Gua ikut ramein komen ya, semangat komunitas Zone 🗿",
+    "First! wkwk mantap kontennya bang",
+    "Bahas lebih lengkap dong, penasaran gua 👀",
+  ],
+};
+
+function pickContextualPostComment(caption: string, hashtags: string[]): string {
+  const blob = `${caption} ${hashtags.join(" ")}`;
+  const topic = detectPostTopic(blob);
+  const pool = TOPIC_COMMENTS[topic];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function pickRandom<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function randomId() { return Math.random().toString(36).slice(2, 10); }
 
