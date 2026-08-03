@@ -3367,6 +3367,25 @@ function App({ session }: { session: Session }) {
         </main>
       )}
 
+      {activeTab === "me" && (
+        <main className="mx-auto max-w-3xl px-4 py-5 pb-24">
+          <MyProfile
+            fallbackName={authorName}
+            handle={authorHandle}
+            seed={authorHandle || authorName}
+            badge={
+              <>
+                {isOwner && <DevPurpleCheck size={16} title="Developer / Owner" />}
+                <TierBadges tier={tier} />
+              </>
+            }
+            myPosts={posts
+              .filter((p) => p.isMine)
+              .map((p) => ({ id: p.id, image: p.image, caption: p.caption, likes: p.likes }))}
+          />
+        </main>
+      )}
+
       {showCreate && (
         <CreatePostModal
           author={authorName}
