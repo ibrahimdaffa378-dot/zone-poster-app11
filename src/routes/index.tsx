@@ -8,6 +8,7 @@ import ep5 from "@/assets/ep5.mp4.asset.json";
 import poster from "@/assets/hdd-poster.asset.json";
 import ep6Poster from "@/assets/ep6-akar-terlarang.jpg.asset.json";
 import taichuVideo from "@/assets/taichu-leizhen.mp4.asset.json";
+import MyProfile from "@/components/MyProfile";
 
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -2662,7 +2663,7 @@ function App({ session }: { session: Session }) {
   const [tier, setTier] = useState<Tier>("standard");
   const [alias, setAlias] = useState<string>("");
   const [showWelcome, setShowWelcome] = useState(true);
-  const [activeTab, setActiveTab] = useState<"watch" | "community">("watch");
+  const [activeTab, setActiveTab] = useState<"watch" | "community" | "me">("watch");
   const [posts, setPosts] = useState<CommunityPost[]>(() => makeSeedPosts());
   const [showCreate, setShowCreate] = useState(false);
   const [botProfile, setBotProfile] = useState<{ name: string; handle: string; color: string; avatar: string; verified?: boolean } | null>(null);
@@ -3366,6 +3367,25 @@ function App({ session }: { session: Session }) {
         </main>
       )}
 
+      {activeTab === "me" && (
+        <main className="mx-auto max-w-3xl px-4 py-5 pb-24">
+          <MyProfile
+            fallbackName={authorName}
+            handle={authorHandle}
+            seed={authorHandle || authorName}
+            badge={
+              <>
+                {isOwner && <DevPurpleCheck size={16} title="Developer / Owner" />}
+                <TierBadges tier={tier} />
+              </>
+            }
+            myPosts={posts
+              .filter((p) => p.isMine)
+              .map((p) => ({ id: p.id, image: p.image, caption: p.caption, likes: p.likes }))}
+          />
+        </main>
+      )}
+
       {showCreate && (
         <CreatePostModal
           author={authorName}
@@ -3397,6 +3417,7 @@ function App({ session }: { session: Session }) {
           {([
             { key: "watch", label: "Nonton", icon: "▶" },
             { key: "community", label: "Komunitas", icon: "◎" },
+            { key: "me", label: "Profil", icon: "☻" },
           ] as const).map((t) => {
             const active = activeTab === t.key;
             return (
