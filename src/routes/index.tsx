@@ -3417,6 +3417,7 @@ function App({ session }: { session: Session }) {
           {([
             { key: "watch", label: "Nonton", icon: "▶" },
             { key: "community", label: "Komunitas", icon: "◎" },
+            { key: "me", label: "Profil", icon: "☻" },
           ] as const).map((t) => {
             const active = activeTab === t.key;
             return (
