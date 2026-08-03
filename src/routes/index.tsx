@@ -2663,7 +2663,7 @@ function App({ session }: { session: Session }) {
   const [tier, setTier] = useState<Tier>("standard");
   const [alias, setAlias] = useState<string>("");
   const [showWelcome, setShowWelcome] = useState(true);
-  const [activeTab, setActiveTab] = useState<"watch" | "community">("watch");
+  const [activeTab, setActiveTab] = useState<"watch" | "community" | "me">("watch");
   const [posts, setPosts] = useState<CommunityPost[]>(() => makeSeedPosts());
   const [showCreate, setShowCreate] = useState(false);
   const [botProfile, setBotProfile] = useState<{ name: string; handle: string; color: string; avatar: string; verified?: boolean } | null>(null);
