@@ -9,6 +9,8 @@ import poster from "@/assets/hdd-poster.asset.json";
 import ep6Poster from "@/assets/ep6-akar-terlarang.jpg.asset.json";
 import taichuVideo from "@/assets/taichu-leizhen.mp4.asset.json";
 import MyProfile from "@/components/MyProfile";
+import { ModerationWarning } from "@/components/ModerationWarning";
+import { containsProfanity, useModeration } from "@/lib/moderation";
 
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -2666,6 +2668,7 @@ function App({ session }: { session: Session }) {
   const [activeTab, setActiveTab] = useState<"watch" | "community" | "me">("watch");
   const [posts, setPosts] = useState<CommunityPost[]>(() => makeSeedPosts());
   const [showCreate, setShowCreate] = useState(false);
+  const moderation = useModeration();
   const [botProfile, setBotProfile] = useState<{ name: string; handle: string; color: string; avatar: string; verified?: boolean } | null>(null);
 
   const [watchedEps, setWatchedEps] = useState<Set<number>>(() => {
@@ -2838,6 +2841,18 @@ function App({ session }: { session: Session }) {
   const isOwner = alias === "Sion_dfkit";
 
   const createPost = (data: { caption: string; hashtags: string[]; mentions: string[]; image: string }) => {
+    const scan = [data.caption, ...(data.hashtags || []), ...(data.mentions || [])].join(" ");
+    if (containsProfanity(scan)) {
+      moderation.flag();
+      setShowCreate(false);
+      setActiveTab("community");
+      return;
+    }
+    if (moderation.locked) {
+      setShowCreate(false);
+      setActiveTab("community");
+      return;
+    }
     const post: CommunityPost = {
       id: randomId(),
       author: authorName,
@@ -2934,6 +2949,12 @@ function App({ session }: { session: Session }) {
     }));
 
   const replyToComment = (postId: string, commentId: string, text: string) => {
+    if (containsProfanity(text)) {
+      moderation.flag();
+      setActiveTab("community");
+      return;
+    }
+    if (moderation.locked) return;
     const myReply: BotReply = {
       id: randomId(),
       name: authorName,
@@ -3349,11 +3370,18 @@ function App({ session }: { session: Session }) {
 
       {activeTab === "community" && (
         <main className="mx-auto max-w-3xl px-4 py-5 pb-24 animate-fade-in">
+          {moderation.locked && (
+            <ModerationWarning
+              appealing={moderation.appealing}
+              countdown={moderation.countdown}
+              onAppeal={moderation.startAppeal}
+            />
+          )}
           <CommunityFeed
             posts={posts}
             onLike={toggleLike}
             onRepost={toggleRepost}
-            onCreate={() => setShowCreate(true)}
+            onCreate={() => { if (moderation.locked) { return; } setShowCreate(true); }}
             onReply={replyToComment}
             onDeletePost={deletePost}
             onDeleteReply={deleteReply}
