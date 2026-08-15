@@ -109,9 +109,14 @@ export default function MyProfile({
     setUploadOpen(false);
   }, []);
 
-  const toggleLike = useCallback((id: string) => {
-    setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, likes: u.likes + 1 } : u)));
+  const toggleLike = useCallback((id: string, delta: number) => {
+    setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, likes: Math.max(0, u.likes + delta) } : u)));
   }, []);
+
+  const addComment = useCallback((id: string) => {
+    setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, comments: u.comments + 1 } : u)));
+  }, []);
+
 
   const bumpShare = useCallback((id: string) => {
     setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, shares: u.shares + 1 } : u)));
@@ -211,7 +216,8 @@ export default function MyProfile({
           handle={handle}
           avatar={data.avatar}
           onClose={() => setPlaying(null)}
-          onLike={() => toggleLike(uploads[playing]!.id)}
+          onLike={(delta) => toggleLike(uploads[playing]!.id, delta)}
+          onComment={() => addComment(uploads[playing]!.id)}
           onShare={() => bumpShare(uploads[playing]!.id)}
         />
       )}
